@@ -11,4 +11,8 @@ fun Application.configureRouting() {
     routing {
         courseRoutes(coursesService = CoursesService(CoursesRepository()))
     }
+
+//    routing {
+//        aRoutes(aService = AService(ARespository()))
+//    }
 }

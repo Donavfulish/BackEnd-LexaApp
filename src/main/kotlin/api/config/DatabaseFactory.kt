@@ -38,4 +38,5 @@ object DatabaseFactory {
     // Hàm tiện ích để bọc các câu lệnh SQL chạy bất đồng bộ (chạy trong coroutine thay vì block main thread của ktor)
     suspend fun <T> dbQuery(block: suspend () -> T): T =
         newSuspendedTransaction { block() }
+
 }

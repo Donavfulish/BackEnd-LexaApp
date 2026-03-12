@@ -2,11 +2,11 @@ package com.lexa.api.services
 
 import api.models.dto.CourseDto
 import api.models.dto.CreateCourseRequest
-import api.repository.CourseRepository
+import api.repository.CoursesRepository
 
 // Nơi xử lí logic nghiệp vụ, cầu nối giữa route và repo, tương tự controller
-class CoursesServices (
-    private val courseRepository: CourseRepository
+class CoursesService (
+    private val courseRepository: CoursesRepository
 ) {
     suspend fun getCourses(): List<CourseDto> {
         return courseRepository.getAllCourses()

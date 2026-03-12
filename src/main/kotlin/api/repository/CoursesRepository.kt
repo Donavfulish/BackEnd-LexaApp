@@ -8,7 +8,7 @@ import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.selectAll
 
 // Nơi giao tiếp trực tiếp với database (nơi này sẽ được sử dụng models và dto)
-class CourseRepository {
+class CoursesRepository {
     suspend fun getAllCourses(): List<CourseDto> = dbQuery {
         CoursesTable
             .selectAll()

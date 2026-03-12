@@ -1,13 +1,14 @@
 package com.lexa.api.plugins
 
+import api.repository.CoursesRepository
+import com.lexa.api.routes.courseRoutes
+import com.lexa.api.services.CoursesService
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 
 fun Application.configureRouting() {
     routing {
-        get("/") {
-            call.respondText("Hello World!")
-        }
+        courseRoutes(coursesService = CoursesService(CoursesRepository()))
     }
 }

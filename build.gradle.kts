@@ -44,4 +44,6 @@ dependencies {
     // Đảm bảo bạn có thư viện Logback để in ra console
     implementation("ch.qos.logback:logback-classic:1.4.14")
     implementation("io.ktor:ktor-server-status-pages-jvm")
+
+    implementation("org.mindrot:jbcrypt:0.4")
 }

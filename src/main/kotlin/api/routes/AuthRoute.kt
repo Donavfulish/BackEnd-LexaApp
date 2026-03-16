@@ -67,8 +67,8 @@ fun Route.authRoutes(authService: AuthService) {
         }
     }
 
-    route("/api/auth") {
-        post("/refresh") {
+    route("/api/auth/refresh") {
+        post {
             val refreshToken = call.receive<RefreshRequest>()
 
             val result = authService.refreshAccessToken(refreshToken)
@@ -79,6 +79,34 @@ fun Route.authRoutes(authService: AuthService) {
                 // Trả về 401 để Frontend biết đường đá người dùng ra màn Login
                 call.respond(HttpStatusCode.Unauthorized, result)
             }
+        }
+    }
+
+    route("/api/auth/logout") {
+
+    }
+
+    route("/api/auth/me") {
+
+    }
+
+    route("/api/auth/google") {
+        get("/check") {
+            // TODO Trả về accessToken + refreshToken nếu tk google này đã tồn tại
+            // TODO Nếu tk chưa tồn tại, thì trả về name + ngày sinh... detect được
+        }
+        get("/signup") {
+            // TODO Xử lý đăng ký, trả về accessToken + refreshToken
+        }
+    }
+
+    route("/api/auth/facebook") {
+        get("/check") {
+            // TODO Trả về accessToken + refreshToken nếu tk google này đã tồn tại
+            // TODO Nếu tk chưa tồn tại, thì trả về name + ngày sinh... detect được
+        }
+        get("/signup") {
+            // TODO Xử lý đăng ký, trả về accessToken + refreshToken
         }
     }
 }

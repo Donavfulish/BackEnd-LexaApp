@@ -46,4 +46,7 @@ dependencies {
     implementation("io.ktor:ktor-server-status-pages-jvm")
 
     implementation("org.mindrot:jbcrypt:0.4")
+
+    // OAuth
+    implementation("com.google.api-client:google-api-client:2.2.0")
 }

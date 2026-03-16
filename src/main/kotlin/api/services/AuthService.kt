@@ -12,6 +12,12 @@ import api.repository.CoursesRepository
 import api.utils.AuthUtil
 import io.ktor.http.HttpStatusCode
 import org.jetbrains.exposed.sql.ResultRow
+import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
+import com.google.api.client.http.javanet.NetHttpTransport
+import com.google.api.client.json.gson.GsonFactory
+import io.github.cdimascio.dotenv.dotenv
+
+val dotenv = dotenv()
 
 class AuthService (
     private val authRepository: AuthRepository
@@ -62,7 +68,7 @@ class AuthService (
         return AuthResult(true, "Đăng ký thành công", accessToken, refreshToken)
     }
 
-    suspend fun refreshAccessToken(refreshRequest: RefreshRequest): AuthResult {
+    suspend fun refreshAccessToken(refreshRequest: RefreshRequest): AuthResult  {
         val refreshToken = refreshRequest.refreshToken
         try {
             // 1. Giải mã token để lấy thông tin (chưa check hết hạn vì RefreshToken thường sống lâu)
@@ -96,4 +102,6 @@ class AuthService (
             return AuthResult(false, "Token không hợp lệ hoặc đã bị chỉnh sửa")
         }
     }
+
+
 }

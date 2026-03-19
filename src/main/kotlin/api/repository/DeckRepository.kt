@@ -2,7 +2,6 @@ package api.repository
 
 import api.models.dto.CreateDeckRequest
 import api.models.dto.DeckDto
-import api.models.dto.DeckResultsTable
 import api.models.dto.UpdateDeckRequest
 import api.models.tables.FlashcardDecksTable
 import api.models.tables.FlashcardsTable

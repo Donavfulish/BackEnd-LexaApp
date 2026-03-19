@@ -16,6 +16,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
+import java.time.LocalDate
 
 class AuthRepository {
     suspend fun findById(userId: Int): UserInfo? = dbQuery {
@@ -60,7 +61,10 @@ class AuthRepository {
             it[passwordHash] = hashedPassword
             it[name] = signupRequest.name
             it[role] = signupRequest.role
-            it[emailVerified] = true
+            it[languageCertificate] = signupRequest.english_certificate_url
+            it[teachingDegree] = signupRequest.pedagogical_certificate_url
+            it[dateOfBirth] = LocalDate.parse(signupRequest.date_of_birth)
+            it[emailVerified] = false
         }
 
         val row = result.resultedValues!!.first()

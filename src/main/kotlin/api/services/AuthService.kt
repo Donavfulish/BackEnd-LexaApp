@@ -43,7 +43,7 @@ class AuthService (
         // 4. Cập nhật Refresh Token vào Database
         authRepository.storeRefreshToken(user.id, refreshToken)
 
-        return AuthResult(true,"Đăng nhập thành công", accessToken, refreshToken)
+        return AuthResult(true,"Đăng nhập thành công", user.id, user, accessToken, refreshToken)
     }
 
     suspend fun signup(signupRequest: SignupRequest): AuthResult {
@@ -65,7 +65,7 @@ class AuthService (
         // 5. Lưu refreshToken vào database
         authRepository.storeRefreshToken(user.id, refreshToken)
 
-        return AuthResult(true, "Đăng ký thành công", accessToken, refreshToken)
+        return AuthResult(true, "Đăng ký thành công", user.id, user, accessToken, refreshToken)
     }
 
     suspend fun refreshAccessToken(refreshRequest: RefreshRequest): AuthResult  {

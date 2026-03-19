@@ -31,7 +31,7 @@ fun Route.authRoutes(authService: AuthService) {
 
             call.respond(
                 HttpStatusCode.OK,
-                successResponse(result, "Đăng nhập thành công")
+                successResponse(result)
             )
         }
     }

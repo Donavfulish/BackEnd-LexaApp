@@ -3,8 +3,11 @@ package api.repository
 import api.models.dto.CourseDto
 import api.models.dto.SignupRequest
 import api.models.dto.UserInfo
+import api.models.enum.OtpPurpose
 import api.models.tables.RefreshTokensTable
+import api.models.tables.UserOtpsTable
 import api.models.tables.UsersTable
+import api.utils.AuthUtil
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
@@ -16,6 +19,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.update
 import java.time.LocalDate
 
 class AuthRepository {
@@ -64,7 +68,7 @@ class AuthRepository {
             it[languageCertificate] = signupRequest.english_certificate_url
             it[teachingDegree] = signupRequest.pedagogical_certificate_url
             it[dateOfBirth] = LocalDate.parse(signupRequest.date_of_birth)
-            it[emailVerified] = false
+            it[emailVerified] = true
         }
 
         val row = result.resultedValues!!.first()
@@ -102,5 +106,30 @@ class AuthRepository {
         // Kiểm tra thời hạn (expiry)
         val expiry = exists[RefreshTokensTable.expiresAt]
         expiry.isAfter(LocalDateTime.now())
+    }
+
+    suspend fun createOTP(_email: String, _otpCode: String) = dbQuery {
+        UserOtpsTable.insert {
+            it[email] = _email
+            it[otpCode] = _otpCode
+            it[purpose] = OtpPurpose.VERIFY_EMAIL
+            it[isUsed] = false
+            it[expiresAt] = LocalDateTime.now().plusMinutes(2)
+        }
+    }
+
+    suspend fun verifyOTP(_email: String, _otpCode: String): Boolean = dbQuery {
+        val now = LocalDateTime.now()
+
+        val updateCount = UserOtpsTable.update({
+            (UserOtpsTable.email eq _email) and
+            (UserOtpsTable.otpCode eq _otpCode) and
+            (UserOtpsTable.isUsed eq false) and
+            (UserOtpsTable.expiresAt greater now)
+        }) {
+            it[isUsed] = true
+        }
+
+        updateCount > 0
     }
 }

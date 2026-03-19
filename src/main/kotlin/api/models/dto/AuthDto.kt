@@ -46,3 +46,14 @@ data class UserInfo (
     val role: UserRole,
     val passwordHash: String? = ""
 )
+
+@Serializable
+data class OtpRequest (
+    val email: String
+)
+
+@Serializable
+data class OtpVerify (
+    val email: String,
+    val otp: String,
+)

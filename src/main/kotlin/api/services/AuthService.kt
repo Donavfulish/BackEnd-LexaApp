@@ -7,10 +7,12 @@ import api.models.dto.LoginRequest
 import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
 import api.models.dto.UserInfo
+import api.models.dto.UserResponse
 import api.models.tables.UsersTable
 import api.repository.AuthRepository
 import api.repository.CoursesRepository
 import api.utils.AuthUtil
+import api.utils.AuthUtil.toResponse
 import io.ktor.http.HttpStatusCode
 import org.jetbrains.exposed.sql.ResultRow
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
@@ -45,7 +47,7 @@ class AuthService (
         // 4. Cập nhật Refresh Token vào Database
         authRepository.storeRefreshToken(user.id, refreshToken)
 
-        return AuthResult(true,"Đăng nhập thành công", user.id, user, accessToken, refreshToken)
+        return AuthResult(true,"Đăng nhập thành công", user.id, user.toResponse(), accessToken, refreshToken)
     }
 
     suspend fun signup(signupRequest: SignupRequest): AuthResult {
@@ -67,7 +69,7 @@ class AuthService (
         // 5. Lưu refreshToken vào database
         authRepository.storeRefreshToken(user.id, refreshToken)
 
-        return AuthResult(true, "Đăng ký thành công", user.id, user, accessToken, refreshToken)
+        return AuthResult(true, "Đăng ký thành công", user.id, user.toResponse(), accessToken, refreshToken)
     }
 
     suspend fun refreshAccessToken(refreshRequest: RefreshRequest): AuthResult  {

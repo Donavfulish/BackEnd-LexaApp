@@ -1,7 +1,10 @@
 package api.routes
 
 import api.models.dto.CreateCourseRequest
+import api.models.dto.ErrorResponse
 import api.models.dto.LoginRequest
+import api.models.dto.OtpRequest
+import api.models.dto.OtpVerify
 import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
 import api.models.dto.successResponse
@@ -31,7 +34,7 @@ fun Route.authRoutes(authService: AuthService) {
 
             call.respond(
                 HttpStatusCode.OK,
-                successResponse(result, "Đăng nhập thành công")
+                successResponse(result)
             )
         }
     }
@@ -107,6 +110,43 @@ fun Route.authRoutes(authService: AuthService) {
         }
         get("/signup") {
             // TODO Xử lý đăng ký, trả về accessToken + refreshToken
+        }
+    }
+
+    route("/api/auth/send-otp") {
+        post {
+            val request = call.receive<OtpRequest>()
+            val otpCode = (100000..999999).random().toString()
+
+            try {
+                // Cách 1: Chờ gửi xong mới trả về response (An toàn nhưng chậm hơn chút)
+                authService.sendOtpEmail(request.email, otpCode)
+
+                // Cách 2: Gửi ngầm và trả về response ngay (Nhanh, cần xử lý log lỗi riêng)
+                // launch(Dispatchers.IO) { sendOtpEmail(request.email, otpCode) }
+
+                call.respond(HttpStatusCode.OK, successResponse(null, "Mã OTP đã được gửi"))
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, "Không thể gửi mail: ${e.message}")
+            }
+        }
+    }
+
+    route("/api/auth/verify-otp") {
+        post {
+            val request = call.receive<OtpVerify>()
+
+            try {
+                val verifyResult = authService.verifyOtpEmail(request.email, request.otp)
+
+                if (verifyResult) {
+                    call.respond(HttpStatusCode.OK, successResponse(null,"Mã OTP hợp lệ"))
+                } else {
+                    call.respond(HttpStatusCode.BadRequest, ErrorResponse(false, "Mã OTP không đúng hoặc đã hết hạn"))
+                }
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, "Không thể gửi mail: ${e.message}")
+            }
         }
     }
 }

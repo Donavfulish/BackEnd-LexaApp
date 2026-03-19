@@ -89,8 +89,8 @@ object RefreshTokensTable : LongIdTable("refresh_tokens") {
 }
 
 object UserOtpsTable : LongIdTable("user_otps") {
-    val userId = reference("user_id", UsersTable)
-    val otpHash = text("otp_hash")
+    val email = text("email")
+    val otpCode = text("otp_code")
 
     // Đã sửa thành pgEnum
     val purpose = pgEnum<OtpPurpose>("purpose", "otp_purpose").default(OtpPurpose.VERIFY_EMAIL)

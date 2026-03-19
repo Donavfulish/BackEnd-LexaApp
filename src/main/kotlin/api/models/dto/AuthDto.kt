@@ -33,7 +33,7 @@ data class AuthResult (
     val ok: Boolean,
     val message: String? = "",
     val id: Int? = null,
-    val user: UserInfo? = null,
+    val user: UserResponse? = null,
     val accessToken: String? = null,
     val refreshToken: String? = null,
 )
@@ -45,6 +45,14 @@ data class UserInfo (
     val name: String,
     val role: UserRole,
     val passwordHash: String? = ""
+)
+
+@Serializable
+data class UserResponse(
+    val id: Int,
+    val email: String,
+    val name: String,
+    val role: UserRole
 )
 
 @Serializable

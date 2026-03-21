@@ -49,4 +49,7 @@ dependencies {
 
     // OAuth
     implementation("com.google.api-client:google-api-client:2.2.0")
+
+    // Mail Service
+    implementation("com.sun.mail:jakarta.mail:2.0.1")
 }

@@ -1,6 +1,6 @@
 package com.lexa.api.services
 
-import api.models.dto.CourseDto
+import api.models.dto.ShortCourseDto
 import api.models.dto.CreateCourseRequest
 import api.repository.CoursesRepository
 
@@ -8,8 +8,12 @@ import api.repository.CoursesRepository
 class CoursesService (
     private val courseRepository: CoursesRepository
 ) {
-    suspend fun getCourses(): List<CourseDto> {
-        return courseRepository.getAllCourses()
+//    suspend fun getCourses(): List<ShortCourseDto> {
+////        return courseRepository.getAllCourses()
+//    }
+
+    suspend fun getFeaturedCourses(): List<ShortCourseDto> {
+        return courseRepository.getFeaturedCourses(10)
     }
 
     suspend fun addCourse(request: CreateCourseRequest) : Result<Long> {

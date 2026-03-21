@@ -89,8 +89,8 @@ object RefreshTokensTable : LongIdTable("refresh_tokens") {
 }
 
 object UserOtpsTable : LongIdTable("user_otps") {
-    val userId = reference("user_id", UsersTable)
-    val otpHash = text("otp_hash")
+    val email = text("email")
+    val otpCode = text("otp_code")
 
     // Đã sửa thành pgEnum
     val purpose = pgEnum<OtpPurpose>("purpose", "otp_purpose").default(OtpPurpose.VERIFY_EMAIL)
@@ -123,6 +123,7 @@ object CoursesTable : LongIdTable("courses") {
     val description = text("description").nullable()
     val creatorId = reference("creator_id", UsersTable)
     val deckId = reference("deck_id", FlashcardDecksTable).nullable()
+    val thumbnailUrl = text("thumbnail_url").nullable()
 
     // Đã sửa thành pgEnum
     val privacy = pgEnum<PrivacyType>("privacy", "privacy_type").nullable()

@@ -1,6 +1,7 @@
 package api.models.dto
 
 import api.models.enum.UserRole
+import io.ktor.network.sockets.SocketAddress
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.dao.id.EntityID
 
@@ -14,7 +15,11 @@ data class LoginRequest(
 data class SignupRequest(
     val name: String,
     val email: String,
+    val date_of_birth: String,
+    val address: String,
     val role: UserRole,
+    val english_certificate_url: String,
+    val pedagogical_certificate_url: String,
     val password: String
 )
 
@@ -27,6 +32,8 @@ data class RefreshRequest(
 data class AuthResult (
     val ok: Boolean,
     val message: String? = "",
+    val id: Int? = null,
+    val user: UserResponse? = null,
     val accessToken: String? = null,
     val refreshToken: String? = null,
 )
@@ -38,4 +45,23 @@ data class UserInfo (
     val name: String,
     val role: UserRole,
     val passwordHash: String? = ""
+)
+
+@Serializable
+data class UserResponse(
+    val id: Int,
+    val email: String,
+    val name: String,
+    val role: UserRole
+)
+
+@Serializable
+data class OtpRequest (
+    val email: String
+)
+
+@Serializable
+data class OtpVerify (
+    val email: String,
+    val otp: String,
 )

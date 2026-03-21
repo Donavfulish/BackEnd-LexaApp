@@ -12,14 +12,14 @@ import io.ktor.server.routing.*
 
 fun Route.courseRoutes(coursesService: CoursesService) {
 
-    route("/api/courses") {
+    route("/api/courses/featured") {
 
         get {
-            val courses = coursesService.getCourses()
+            val courses = coursesService.getFeaturedCourses()
 
             call.respond(
                 HttpStatusCode.OK,
-                successResponse(courses, "Lấy danh sách khóa học thành công")
+                successResponse(courses, "Lấy danh sách khóa học nổi bât thành công")
             )
         }
 

@@ -453,4 +453,50 @@ class CoursesRepository {
             it[privacy] = api.models.enum.PrivacyType.valueOf(request.privacy)
         }.value
     }
+
+    suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> = dbQuery {
+
+        CoursesTable
+            .innerJoin(UsersTable)
+            .leftJoin(TopicsTable)
+            .innerJoin(UserFavoriteCoursesTable)
+            .select {
+                (CoursesTable.privacy eq PrivacyType.PUBLIC) and
+                        (UserFavoriteCoursesTable.userId eq userId)
+            }
+            .map { row ->
+                val courseId = row[CoursesTable.id]
+                val isFavorite = true
+                val studyingUserCount: Int = run {
+                    val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
+                    (SpeakingParagraphResultsTable
+                        .innerJoin(SpeakingParagraphsTable)
+                        .innerJoin(SpeakingDaysTable)
+                        .slice(learnerCountExpr)
+                        .select {
+                            SpeakingDaysTable.courseId eq courseId
+                        }
+                        .firstOrNull()
+                        ?.get(learnerCountExpr) ?: 0L
+                            ).toInt()
+                }
+                val favoriteCountExpr = (UserFavoriteCoursesTable.userId.count())
+                val favoriteUserCount = (UserFavoriteCoursesTable
+                    .slice(favoriteCountExpr)
+                    .select { UserFavoriteCoursesTable.courseId eq courseId }
+                    .firstOrNull()
+                    ?.get(favoriteCountExpr) ?: 0L).toInt()
+
+                ShortCourseDto(
+                    id = courseId.value,
+                    thumbnail_url = row[CoursesTable.thumbnailUrl],
+                    type = row[TopicsTable.name],
+                    title = row[CoursesTable.title],
+                    creator_name = row[UsersTable.name],
+                    is_favorite = isFavorite,
+                    studying_user_count = studyingUserCount,
+                    favorite_user_count = favoriteUserCount
+                )
+            }
+    }
 }

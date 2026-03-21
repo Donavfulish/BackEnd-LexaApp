@@ -11,8 +11,8 @@ import io.ktor.server.routing.*
 
 fun Route.profileRoutes(profileService: ProfileService) {
 
-    route("/api/profile/{id}") {
-        get {
+    route("/api/profile") {
+        get("/{id}") {
             val idString = call.parameters["id"]
             if(idString == null) {
                 call.respond(HttpStatusCode.BadRequest,errorResponse("Thiếu id"))

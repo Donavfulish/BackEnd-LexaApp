@@ -1,6 +1,5 @@
 package api.repository
 
-import api.models.dto.CourseDto
 import api.models.dto.SignupRequest
 import api.models.dto.UserInfo
 import api.models.enum.OtpPurpose

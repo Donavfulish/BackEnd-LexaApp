@@ -123,6 +123,7 @@ object CoursesTable : LongIdTable("courses") {
     val description = text("description").nullable()
     val creatorId = reference("creator_id", UsersTable)
     val deckId = reference("deck_id", FlashcardDecksTable).nullable()
+    val thumbnailUrl = text("thumbnail_url").nullable()
 
     // Đã sửa thành pgEnum
     val privacy = pgEnum<PrivacyType>("privacy", "privacy_type").nullable()

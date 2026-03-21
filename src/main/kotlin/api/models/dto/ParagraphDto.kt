@@ -3,9 +3,9 @@ import kotlinx.serialization.Serializable
 
 @Serializable
 data class ShortParagraphDto(
-    val id: Int,
-    val paragraph: String,
-    val paragraph_order: Int,
+    val id: Long,
+    val paragraph: String?,
+    val paragraph_order: Long?,
 ){
 
 }

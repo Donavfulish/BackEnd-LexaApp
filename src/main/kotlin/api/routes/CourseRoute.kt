@@ -15,7 +15,7 @@ fun Route.courseRoutes(coursesService: CoursesService) {
     route("/api/courses/featured") {
 
         get {
-            val courses = coursesService.getFeaturedCourses()
+            val courses = coursesService.getFeaturedCourses(10)
 
             call.respond(
                 HttpStatusCode.OK,
@@ -23,16 +23,72 @@ fun Route.courseRoutes(coursesService: CoursesService) {
             )
         }
 
-        post {
 
-            val request = call.receive<CreateCourseRequest>()
+    }
+    route("/api/courses/studying") {
 
-            val id = coursesService.addCourse(request).getOrThrow()
+        get {
+            val courses = coursesService.getStudyingCourses(10)
 
             call.respond(
-                HttpStatusCode.Created,
-                mapOf("id" to id)
+                HttpStatusCode.OK,
+                successResponse(courses, "Lấy danh sách khóa học đang học thành công")
             )
         }
+
+
+    }
+    route("/api/courses/top-studied") {
+
+        get {
+            val courses = coursesService.getTopStudiedCourses(10)
+
+            call.respond(
+                HttpStatusCode.OK,
+                successResponse(courses, "Lấy danh sách khoá học có nhiều lượt học nhất  thành công")
+            )
+        }
+
+
+    }
+    route("/api/courses") {
+
+        get {
+            val courses = coursesService.getAllCourses(10)
+
+            call.respond(
+                HttpStatusCode.OK,
+                successResponse(courses, "Lấy danh sách tất cả khoá học  thành công")
+            )
+        }
+    }
+
+    // TODO: CHINH LAI ROUTE
+    route("/api/users/me/courses") {
+
+        get {
+            val courses = coursesService.getMyCourses(10)
+
+            call.respond(
+                HttpStatusCode.OK,
+                successResponse(courses, "Lấy danh sách khóa học của tôi  thành công")
+            )
+        }
+
+
+    }
+    route("/api/courses/{courseId}/speaking-days") {
+
+        get {
+            val courseId: Long = call.parameters["courseId"]!!.toLong()
+            val courses = coursesService.getSpeakingDayCourses(10, courseId)
+
+            call.respond(
+                HttpStatusCode.OK,
+                successResponse(courses, "Lấy danh sách khóa học speaking day thành công")
+            )
+        }
+
+
     }
 }

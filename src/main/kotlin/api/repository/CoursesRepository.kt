@@ -75,12 +75,12 @@ class CoursesRepository {
                 )
             }
     }
-    suspend fun getSpeakingDayCourses(userId: Int): List<SpeakingCourseDetailDto> = dbQuery {
+    suspend fun getSpeakingDayCourses(userId: Int, courseId: Long): List<SpeakingCourseDetailDto> = dbQuery {
 
         CoursesTable
             .innerJoin(UsersTable)
             .leftJoin(TopicsTable)
-            .select { CoursesTable.privacy eq PrivacyType.PUBLIC }
+            .select { (CoursesTable.privacy eq PrivacyType.PUBLIC) and (CoursesTable.id eq courseId)}
             .map { row ->
 
                 val courseId = row[CoursesTable.id]
@@ -281,7 +281,7 @@ class CoursesRepository {
                     favorite_user_count = favoriteUserCount
                 )
             }
-            .sortedByDescending { it.favorite_user_count }
+            .sortedByDescending { it.studying_user_count }
     }
 
     suspend fun getStudyingCourses(userId: Int): List<ShortCourseDto> = dbQuery {

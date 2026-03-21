@@ -1,5 +1,6 @@
 package api.routes
 
+import api.config.getUserId
 import api.models.dto.CreateCourseRequest
 import api.models.dto.ErrorResponse
 import api.models.dto.LoginRequest
@@ -12,6 +13,8 @@ import api.services.AuthService
 import com.lexa.api.services.CoursesService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
@@ -62,9 +65,11 @@ fun Route.authRoutes(authService: AuthService) {
     route("api/auth/check-auth") {
         authenticate("auth-jwt") { // Bọc phương thức trong hàm này để xác thực token
             get {
+                val userId = call.getUserId()
+
                 call.respond(
                     HttpStatusCode.OK,
-                    successResponse("Bạn có quyền truy cập", "Bạn đã đăng nhập")
+                    successResponse("id của bạn là $userId", "Bạn đã đăng nhập")
                 )
             }
         }

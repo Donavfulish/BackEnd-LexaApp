@@ -2,7 +2,9 @@ package api.repository
 
 import api.models.dto.CreateDeckRequest
 import api.models.dto.DeckDto
+import api.models.dto.DeckResult
 import api.models.dto.UpdateDeckRequest
+import api.models.tables.DeckResultsTable
 import api.models.tables.FlashcardDecksTable
 import api.models.tables.FlashcardsTable
 import com.lexa.api.config.DatabaseFactory.dbQuery
@@ -13,17 +15,6 @@ import java.time.LocalDateTime
 
 class DeckRepository {
 
-    suspend fun getVocabNumber(deckId: Long): Int = dbQuery {
-        FlashcardsTable
-            .select { FlashcardsTable.deckId eq deckId }
-            .count()
-            .toInt()
-    }
-
-//    suspend fun addDeckResult(deckId: Long): Long = dbQuery {
-//
-//    }
-
     suspend fun createDeck(request: CreateDeckRequest): Long = dbQuery {
         FlashcardDecksTable.insertAndGetId {
             it[title] = request.title
@@ -33,7 +24,7 @@ class DeckRepository {
     }
 
     suspend fun updateDeck(request: UpdateDeckRequest): Boolean = dbQuery {
-        FlashcardDecksTable.update({ FlashcardDecksTable.id eq request.id }) {
+        FlashcardDecksTable.update({ FlashcardDecksTable.id eq request.deckId }) {
             request.title?.let { t -> it[title] = t }
             request.privacy?.let { p ->
                 it[privacy] = api.models.enum.PrivacyType.valueOf(p.uppercase()) 
@@ -46,6 +37,19 @@ class DeckRepository {
         FlashcardDecksTable.deleteWhere { FlashcardDecksTable.id eq deckId } > 0
     }
 
+    suspend fun getDeckResult(userId: Int, deckId: Long): DeckResult? = dbQuery {
+        DeckResultsTable
+            .select{ (DeckResultsTable.deckId eq deckId) and (DeckResultsTable.userId eq userId) }
+            .map{ row ->
+                DeckResult(
+                    userId = row[DeckResultsTable.userId].value,
+                    deckId = row[DeckResultsTable.deckId].value,
+                    rememberedCount = row[DeckResultsTable.rememberedCount],
+                    forgottenCount = row[DeckResultsTable.forgottenCount]
+                )
+            }
+            .singleOrNull()
+    }
 
     suspend fun getAllDecks(userId: Int?): List<DeckDto> = dbQuery {
         val vocabCountExpr = wrapAsExpression<Long>(

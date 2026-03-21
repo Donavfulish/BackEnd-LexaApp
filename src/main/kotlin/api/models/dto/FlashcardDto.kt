@@ -3,15 +3,6 @@ package api.models.dto
 import io.ktor.http.Url
 import kotlinx.serialization.Serializable
 
-//@Serializable
-//data class FlashcardDto(
-//    val id: Int,
-//    val word: String,
-//    val transcription: String,
-//    val type: String,
-//    val deckId: Int
-//) : java.io.Serializable
-
 @Serializable
 data class DetailFlashcard(
     val id: Int,

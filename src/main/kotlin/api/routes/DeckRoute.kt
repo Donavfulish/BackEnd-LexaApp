@@ -6,38 +6,47 @@ import api.models.dto.errorResponse
 import api.models.dto.successResponse
 import api.services.DeckService
 import io.ktor.http.HttpStatusCode
+import io.ktor.server.auth.authenticate
+import io.ktor.server.auth.jwt.JWTPrincipal
+import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
 
 fun Route.deckRoutes(deckService: DeckService) {
 
-    route("/api/decks") {
+    route("/api/user/me/decks") {
 
-        get {
-            val decks = deckService.getAllDecks()
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(decks, "Lấy danh sách bộ từ vựng thành công")
-            )
-        }
-    }
+        authenticate("auth-jwt") {
+            get {
+                val principal = call.principal<JWTPrincipal>()
+                val userId = principal?.payload?.getClaim("id")!!.asInt()
+                val decks = deckService.getMyDecks(userId)
 
-    route("/api/my-decks") {
-        get {
-            val userId = call.request.queryParameters["userId"]?.toIntOrNull()
-                ?: return@get call.respond(
-                    HttpStatusCode.BadRequest,
-                    errorResponse("Thiếu userId")
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(decks, "Lấy danh sách bộ từ vựng cá nhân thành công")
                 )
-
-            val decks = deckService.getMyDecks(userId)
-
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(decks, "Lấy danh sách bộ từ vựng cá nhân thành công")
-            )
+            }
+            get("/result/{deckId}") {
+                val deckId = call.parameters["deckId"]!!.toLong()
+                val principal = call.principal<JWTPrincipal>()
+                val userId = principal?.payload?.getClaim("id")!!.asInt()
+                val result = deckService.getDeckResult(userId, deckId)
+                result.onSuccess { data ->
+                    call.respond(
+                        HttpStatusCode.OK,
+                        successResponse(data, "Lấy kết quả bộ từ vựng thành công")
+                    )
+                }.onFailure { error ->
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        errorResponse(error.message ?: "Lỗi khi lấy kết quả bộ từ vựng")
+                    )
+                }
+            }
         }
+
 
         post {
             val request = call.receive<CreateDeckRequest>()
@@ -58,7 +67,7 @@ fun Route.deckRoutes(deckService: DeckService) {
         }
 
         // UPDATE Deck
-        put{
+        patch("/{deckId}"){
             val request = call.receive<UpdateDeckRequest>()
 
             deckService.updateDeck(request)
@@ -75,8 +84,8 @@ fun Route.deckRoutes(deckService: DeckService) {
         }
 
         // DELETE Deck
-        delete("/{id}") {
-            val id = call.parameters["id"]!!.toLong()
+        delete("/{deckId}") {
+            val id = call.parameters["deckId"]!!.toLong()
 
             deckService.deleteDeck(id)
                 .onSuccess { success ->

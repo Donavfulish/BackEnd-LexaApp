@@ -31,6 +31,8 @@ class FlashcardRepository {
             }
     }
 
+
+
     suspend fun updateFlashcard(request: UpdateFlashcardRequest) : Boolean = dbQuery {
         FlashcardsTable.update({FlashcardsTable.id eq request.id}){
             it[word] = request.word

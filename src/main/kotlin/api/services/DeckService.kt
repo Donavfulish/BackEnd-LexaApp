@@ -2,6 +2,7 @@ package api.services
 
 import api.models.dto.CreateDeckRequest
 import api.models.dto.DeckDto
+import api.models.dto.DeckResult
 import api.models.dto.UpdateDeckRequest
 import api.repository.DeckRepository
 
@@ -14,6 +15,15 @@ class DeckService(
 
     suspend fun getMyDecks(userId: Int): List<DeckDto>{
         return deckRepository.getAllDecks(userId);
+    }
+
+    suspend fun getDeckResult(userId: Int, deckId: Long): Result<DeckResult?> {
+        return try{
+            val result = deckRepository.getDeckResult(userId, deckId)
+            Result.success(result)
+        } catch (e: Exception){
+            Result.failure(e)
+        }
     }
 
     suspend fun addDeck(request: CreateDeckRequest) : Result<Long>{

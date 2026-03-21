@@ -15,19 +15,6 @@ data class DeckDto(
     val createdAt: String
 )
 
-//@Serializable
-//data class DetailDeck(
-//    val id: Long,
-//    val title: String,
-//    val vocabNumber: Int,
-//    val description: String?,
-//    val privacy: String?,
-//    val studentNumber: Int,
-//    val favoriteNumber: Int,
-//    val creator: String,
-//    val topic: String?
-//)
-
 @Serializable
 data class CreateDeckRequest(
     val title: String,
@@ -36,9 +23,17 @@ data class CreateDeckRequest(
 
 @Serializable
 data class UpdateDeckRequest(
-    val id: Long,
+    val deckId: Long,
     val title: String,
     val privacy: String? = null
+)
+
+@Serializable
+data class DeckResult(
+    val deckId: Long,
+    val userId: Int,
+    val rememberedCount: Int?,
+    val forgottenCount: Int?
 )
 
 @Serializable

@@ -11,7 +11,7 @@ import io.ktor.server.request.*
 import io.ktor.server.response.*
 
 fun Route.flashcardRoutes(flashcardService: FlashcardService){
-    route("api/{deckId}/flashcards") {
+    route("api/decks/{deckId}/flashcards") {
         get {
             val deckId = call.parameters["deckId"]!!.toLong()
             val flashcards = flashcardService.getAllFlashcard(deckId)

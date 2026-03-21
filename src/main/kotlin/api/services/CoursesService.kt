@@ -43,4 +43,7 @@ class CoursesService (
             Result.failure(e)
         }
     }
+    suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> {
+        return courseRepository.getFavoriteCourses(userId)
+    }
 }

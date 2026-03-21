@@ -5,14 +5,17 @@ import api.repository.CoursesRepository
 import api.repository.DeckRepository
 import api.repository.FlashcardRepository
 import api.repository.SpeakingDayRepository
+import api.repository.ProfileRepository
 import api.routes.authRoutes
 import api.routes.deckRoutes
 import api.routes.flashcardRoutes
 import api.routes.speakingDayRoutes
+import api.routes.profileRoutes
 import api.services.AuthService
 import api.services.DeckService
 import api.services.FlashcardService
 import api.services.SpeakingDayService
+import api.services.ProfileService
 import com.lexa.api.routes.courseRoutes
 import com.lexa.api.services.CoursesService
 import io.ktor.server.application.*
@@ -26,6 +29,8 @@ fun Application.configureRouting() {
         deckRoutes(deckService = DeckService(DeckRepository()))
         flashcardRoutes(flashcardService = FlashcardService(FlashcardRepository()))
         speakingDayRoutes(speakingDaySerice = SpeakingDayService(SpeakingDayRepository()))
+        profileRoutes(profileService = ProfileService(ProfileRepository()))
+
     }
 
 //    routing {

@@ -109,6 +109,7 @@ object FlashcardDecksTable : LongIdTable("flashcard_decks") {
     val creatorId = reference("creator_id", UsersTable)
     val title = varchar("title", 100)
     val description = text("description").nullable()
+    val topicId = reference("topic_id", TopicsTable)
 
     // Đã sửa thành pgEnum
     val privacy = pgEnum<PrivacyType>("privacy", "privacy_type").nullable()

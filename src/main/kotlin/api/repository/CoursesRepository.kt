@@ -14,7 +14,9 @@ import api.models.tables.SpeakingParagraphResultsTable
 import api.models.tables.SpeakingParagraphsTable
 import api.models.tables.SpeakingDaysTable
 import api.models.enum.PrivacyType
+import api.models.tables.FlashcardDecksTable
 import api.models.tables.FlashcardsTable
+import api.models.tables.UserFavoriteDecksTable
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
@@ -514,6 +516,62 @@ class CoursesRepository {
             .select {
                 (CoursesTable.privacy eq PrivacyType.PUBLIC) and
                         (UserFavoriteCoursesTable.userId eq userId)
+            }
+            .map { row ->
+                val courseId = row[CoursesTable.id]
+                val isFavorite = true
+                val studyingUserCount: Int = run {
+                    val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
+                    (SpeakingParagraphResultsTable
+                        .innerJoin(SpeakingParagraphsTable)
+                        .innerJoin(SpeakingDaysTable)
+                        .slice(learnerCountExpr)
+                        .select {
+                            SpeakingDaysTable.courseId eq courseId
+                        }
+                        .firstOrNull()
+                        ?.get(learnerCountExpr) ?: 0L
+                            ).toInt()
+                }
+                val vocabNumber = row[CoursesTable.deckId]?.let { dId ->
+                    FlashcardsTable.select { FlashcardsTable.deckId eq dId }.count()
+                } ?: 0L
+                val favoriteCountExpr = (UserFavoriteCoursesTable.userId.count())
+                val favoriteUserCount = (UserFavoriteCoursesTable
+                    .slice(favoriteCountExpr)
+                    .select { UserFavoriteCoursesTable.courseId eq courseId }
+                    .firstOrNull()
+                    ?.get(favoriteCountExpr) ?: 0L).toInt()
+
+                ShortCourseDto(
+                    id = courseId.value,
+                    thumbnail_url = row[CoursesTable.thumbnailUrl],
+                    topic = TopicDto(
+                        id = row[TopicsTable.id]?.value ?: 0,
+                        name = row[TopicsTable.name] ?: "",
+                        colorHex = row[TopicsTable.color] ?: "#636AE8"),
+                    title = row[CoursesTable.title],
+                    description = row[CoursesTable.description] ?: "",
+                    creator_name = row[UsersTable.name],
+                    creator_avatar_url = row[UsersTable.avatarUrl] ?: "",
+                    is_favorite = isFavorite,
+                    vocabNumber = vocabNumber.toInt(),
+                    studying_user_count = studyingUserCount,
+                    favorite_user_count = favoriteUserCount
+                )
+            }
+    }
+
+    suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> = dbQuery {
+
+        UserFavoriteDecksTable
+        UserFavoriteDecksTable
+            .innerJoin(CoursesTable, { deckId }, { deckId })
+            .innerJoin(UsersTable, { CoursesTable.creatorId }, { id })
+            .leftJoin(TopicsTable, { CoursesTable.topicId }, { id })
+            .select {
+                (CoursesTable.privacy eq PrivacyType.PUBLIC) and
+                        (UserFavoriteDecksTable.userId eq userId)
             }
             .map { row ->
                 val courseId = row[CoursesTable.id]

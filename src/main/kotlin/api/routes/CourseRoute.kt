@@ -83,6 +83,24 @@ fun Route.courseRoutes(coursesService: CoursesService) {
         }
     }
 
+    route("/api/user/me/deck/favorite") {
+
+        get("/{id}") {
+            val idString = call.parameters["id"]
+            if(idString == null) {
+                call.respond(HttpStatusCode.BadRequest,errorResponse("Thiếu id"))
+                return@get
+            }
+            val id: Int = idString.toInt()
+            val courses = coursesService.getFavoriteDecks(id)
+
+            call.respond(
+                HttpStatusCode.OK,
+                successResponse(courses, "Lấy danh sách khóa yêu thích thành công")
+            )
+        }
+    }
+
     // TODO: CHINH LAI ROUTE
     route("/api/users/me/courses") {
 

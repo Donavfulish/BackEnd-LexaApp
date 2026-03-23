@@ -3,6 +3,8 @@ package api.repository
 import api.models.dto.ShortCourseDto
 import api.models.dto.CreateCourseRequest
 import api.models.dto.CreatorDto
+import api.models.dto.GetFeaturedCourseResponse
+import api.models.dto.GetStudyingCourseResponse
 import api.models.dto.ShortSpeakingDayDto
 import api.models.dto.SpeakingCourseDetailDto
 import api.models.dto.TopicDto
@@ -178,17 +180,14 @@ class CoursesRepository {
             list_speaking_day = list_speaking_day
         )
     }
-    suspend fun getFeaturedCourses(userId: Int): List<ShortCourseDto> = dbQuery {
+    suspend fun getFeaturedCourses(userId: Int): List<GetFeaturedCourseResponse> = dbQuery {
 
         CoursesTable
             .innerJoin(UsersTable)
             .leftJoin(TopicsTable)
             .select { CoursesTable.privacy eq PrivacyType.PUBLIC }
             .map { row ->
-
                 val courseId = row[CoursesTable.id]
-                val deckId = row[CoursesTable.deckId]
-
                 val isFavorite = UserFavoriteCoursesTable
                     .select {
                         (UserFavoriteCoursesTable.courseId eq courseId) and
@@ -211,10 +210,6 @@ class CoursesRepository {
                             ).toInt()
                 }
 
-                val vocabNumber = row[CoursesTable.deckId]?.let { dId ->
-                    FlashcardsTable.select { FlashcardsTable.deckId eq dId }.count()
-                } ?: 0L
-
                 val favoriteCountExpr = (UserFavoriteCoursesTable.userId.count())
 
                 val favoriteUserCount = (UserFavoriteCoursesTable
@@ -223,7 +218,7 @@ class CoursesRepository {
                     .firstOrNull()
                     ?.get(favoriteCountExpr) ?: 0L).toInt()
 
-                ShortCourseDto(
+                GetFeaturedCourseResponse(
                     id = courseId.value,
                     thumbnail_url = row[CoursesTable.thumbnailUrl],
                     topic = TopicDto(
@@ -231,18 +226,16 @@ class CoursesRepository {
                         name = row[TopicsTable.name] ?: "",
                         colorHex = row[TopicsTable.color] ?: "#636AE8"),
                     title = row[CoursesTable.title],
-                    description = row[CoursesTable.description] ?: "",
                     creator_name = row[UsersTable.name],
                     creator_avatar_url = row[UsersTable.avatarUrl] ?: "",
                     is_favorite = isFavorite,
-                    vocabNumber = vocabNumber.toInt(),
                     studying_user_count = studyingUserCount,
                     favorite_user_count = favoriteUserCount
                 )
             }
             .sortedByDescending { it.favorite_user_count }
     }
-    suspend fun getTopStudiedCourses(userId: Int): List<ShortCourseDto> = dbQuery {
+    suspend fun getTopStudiedCourses(userId: Int): List<GetFeaturedCourseResponse> = dbQuery {
 
         CoursesTable
             .innerJoin(UsersTable)
@@ -287,7 +280,7 @@ class CoursesRepository {
                     .firstOrNull()
                     ?.get(favoriteCountExpr) ?: 0L).toInt()
 
-                ShortCourseDto(
+                GetFeaturedCourseResponse(
                     id = courseId.value,
                     thumbnail_url = row[CoursesTable.thumbnailUrl],
                     topic = TopicDto(
@@ -295,11 +288,9 @@ class CoursesRepository {
                         name = row[TopicsTable.name] ?: "",
                         colorHex = row[TopicsTable.color] ?: "#636AE8"),
                     title = row[CoursesTable.title],
-                    description = row[CoursesTable.description] ?: "",
                     creator_name = row[UsersTable.name],
                     creator_avatar_url = row[UsersTable.avatarUrl] ?: "",
                     is_favorite = isFavorite,
-                    vocabNumber = vocabNumber.toInt(),
                     studying_user_count = studyingUserCount,
                     favorite_user_count = favoriteUserCount
                 )
@@ -307,7 +298,7 @@ class CoursesRepository {
             .sortedByDescending { it.studying_user_count }
     }
 
-    suspend fun getStudyingCourses(userId: Int): List<ShortCourseDto> = dbQuery {
+    suspend fun getStudyingCourses(userId: Int): List<GetStudyingCourseResponse> = dbQuery {
 
         CoursesTable
             .innerJoin(SpeakingDaysTable)
@@ -324,37 +315,6 @@ class CoursesRepository {
             .map { row ->
 
                 val courseId = row[CoursesTable.id]
-
-                // ===== isFavorite =====
-                val isFavorite = UserFavoriteCoursesTable
-                    .select {
-                        (UserFavoriteCoursesTable.courseId eq courseId) and
-                                (UserFavoriteCoursesTable.userId eq userId)
-                    }
-                    .empty().not()
-
-                // ===== studying user count =====
-                val studyingUserCount: Int = run {
-                    val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
-
-                    (SpeakingParagraphResultsTable
-                        .innerJoin(SpeakingParagraphsTable)
-                        .innerJoin(SpeakingDaysTable)
-                        .slice(learnerCountExpr)
-                        .select { SpeakingDaysTable.courseId eq courseId }
-                        .firstOrNull()
-                        ?.get(learnerCountExpr) ?: 0L
-                            ).toInt()
-                }
-
-                // ===== favorite user count =====
-                val favoriteCountExpr = UserFavoriteCoursesTable.userId.count()
-
-                val favoriteUserCount = (UserFavoriteCoursesTable
-                    .slice(favoriteCountExpr)
-                    .select { UserFavoriteCoursesTable.courseId eq courseId }
-                    .firstOrNull()
-                    ?.get(favoriteCountExpr) ?: 0L).toInt()
 
                 // ===== progress =====
                 val totalDayExpr = SpeakingDaysTable.id.count()
@@ -396,11 +356,9 @@ class CoursesRepository {
                     if (totalDays == 0L) 0
                     else ((completedDays * 100) / totalDays).toInt()
 
-                val vocabNumber = row[CoursesTable.deckId]?.let { dId ->
-                    FlashcardsTable.select { FlashcardsTable.deckId eq dId }.count()
-                } ?: 0L
 
-                ShortCourseDto(
+
+                GetStudyingCourseResponse(
                     id = courseId.value,
                     thumbnail_url = row[CoursesTable.thumbnailUrl],
                     topic = TopicDto(
@@ -408,16 +366,8 @@ class CoursesRepository {
                         name = row[TopicsTable.name] ?: "",
                         colorHex = row[TopicsTable.color] ?: "#636AE8"),
                     title = row[CoursesTable.title],
-                    description = row[CoursesTable.description] ?: "",
-                    creator_name = row[UsersTable.name],
-                    creator_avatar_url = row[UsersTable.avatarUrl] ?: "",
-                    is_favorite = isFavorite,
-                    vocabNumber = vocabNumber.toInt(),
-                    studying_user_count = studyingUserCount,
-                    favorite_user_count = favoriteUserCount
-                )
+                    progress = completed)
             }
-            .sortedByDescending { it.studying_user_count }
     }
 
     suspend fun getMyCourses(userId: Int): List<ShortCourseDto> = dbQuery {

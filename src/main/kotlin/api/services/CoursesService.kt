@@ -46,4 +46,8 @@ class CoursesService (
     suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> {
         return courseRepository.getFavoriteCourses(userId)
     }
+
+    suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> {
+        return courseRepository.getFavoriteDecks(userId)
+    }
 }

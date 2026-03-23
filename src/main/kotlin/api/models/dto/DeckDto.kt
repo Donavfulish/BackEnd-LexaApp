@@ -11,6 +11,7 @@ import org.jetbrains.exposed.sql.javatime.datetime
 data class DeckDto(
     val id: Long,
     val title: String,
+    val topic: TopicDto? = null,
     val vocabNumber: Int,
     val createdAt: String
 )

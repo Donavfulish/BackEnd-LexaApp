@@ -3,10 +3,12 @@ package api.repository
 import api.models.dto.CreateDeckRequest
 import api.models.dto.DeckDto
 import api.models.dto.DeckResult
+import api.models.dto.TopicDto
 import api.models.dto.UpdateDeckRequest
 import api.models.tables.DeckResultsTable
 import api.models.tables.FlashcardDecksTable
 import api.models.tables.FlashcardsTable
+import api.models.tables.TopicsTable
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -57,11 +59,14 @@ class DeckRepository {
                 .slice(FlashcardsTable.id.count())
                 .select { FlashcardsTable.deckId eq FlashcardDecksTable.id }
         )
-        val query = FlashcardDecksTable
+        val query = (FlashcardDecksTable leftJoin TopicsTable)
             .slice(
                 FlashcardDecksTable.id,
                 FlashcardDecksTable.title,
                 FlashcardDecksTable.createdAt,
+                TopicsTable.id,
+                TopicsTable.name,
+                TopicsTable.color,
                 vocabCountExpr
             )
         val finalQuery = if (userId != null) {
@@ -73,6 +78,11 @@ class DeckRepository {
             DeckDto(
                 id = row[FlashcardDecksTable.id].value,
                 title = row[FlashcardDecksTable.title],
+                topic = TopicDto(
+                    id = row[TopicsTable.id].value,
+                    name = row[TopicsTable.name] ?: "",
+                    colorHex = row[TopicsTable.color] ?: "#FFFFFF",
+                ),
                 vocabNumber = row[vocabCountExpr]?.toInt() ?: 0,
                 createdAt = convertTime(row[FlashcardDecksTable.createdAt])
             )

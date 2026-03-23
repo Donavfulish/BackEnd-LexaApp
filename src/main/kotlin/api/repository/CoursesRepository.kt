@@ -89,105 +89,94 @@ class CoursesRepository {
                 )
             }
     }
-    suspend fun getSpeakingDayCourses(userId: Int, courseId: Long): List<SpeakingCourseDetailDto> = dbQuery {
+    suspend fun getSpeakingDayCourse(userId: Int, courseId: Long): SpeakingCourseDetailDto? = dbQuery {
 
-        CoursesTable
+        val row = CoursesTable
             .innerJoin(UsersTable)
             .leftJoin(TopicsTable)
-            .select { (CoursesTable.privacy eq PrivacyType.PUBLIC) and (CoursesTable.id eq courseId)}
-            .map { row ->
+            .select { (CoursesTable.privacy eq PrivacyType.PUBLIC) and (CoursesTable.id eq courseId) }
+            .singleOrNull() ?: return@dbQuery null
 
-                val courseId = row[CoursesTable.id]
-                val deckId = row[CoursesTable.deckId]
+        val courseIdEntity = row[CoursesTable.id]
+        val isFavorite = UserFavoriteCoursesTable
+            .select {
+                (UserFavoriteCoursesTable.courseId eq courseIdEntity) and
+                        (UserFavoriteCoursesTable.userId eq userId)
+            }
+            .empty().not()
 
-                val isFavorite = UserFavoriteCoursesTable
-                    .select {
-                        (UserFavoriteCoursesTable.courseId eq courseId) and
-                                (UserFavoriteCoursesTable.userId eq userId)
-                    }
-                    .empty().not()
+        val studyingUserCount: Int = run {
+            val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
 
-                val studyingUserCount: Int = run {
-                    val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
-
-                    (SpeakingParagraphResultsTable
-                        .innerJoin(SpeakingParagraphsTable)
-                        .innerJoin(SpeakingDaysTable)
-                        .slice(learnerCountExpr)
-                        .select {
-                            SpeakingDaysTable.courseId eq courseId
-                        }
-                        .firstOrNull()
-                        ?.get(learnerCountExpr) ?: 0L
-                            ).toInt()
+            (SpeakingParagraphResultsTable
+                .innerJoin(SpeakingParagraphsTable)
+                .innerJoin(SpeakingDaysTable)
+                .slice(learnerCountExpr)
+                .select {
+                    SpeakingDaysTable.courseId eq courseIdEntity
                 }
+                .firstOrNull()
+                ?.get(learnerCountExpr) ?: 0L
+                    ).toInt()
+        }
 
-                val favoriteCountExpr = (UserFavoriteCoursesTable.userId.count())
+        val favoriteCountExpr = (UserFavoriteCoursesTable.userId.count())
+        val favoriteUserCount = (UserFavoriteCoursesTable
+            .slice(favoriteCountExpr)
+            .select { UserFavoriteCoursesTable.courseId eq courseIdEntity }
+            .firstOrNull()
+            ?.get(favoriteCountExpr) ?: 0L).toInt()
 
-                val favoriteUserCount = (UserFavoriteCoursesTable
-                    .slice(favoriteCountExpr)
-                    .select { UserFavoriteCoursesTable.courseId eq courseId }
+        val list_speaking_day = SpeakingDaysTable
+            .select { SpeakingDaysTable.courseId eq courseIdEntity }
+            .orderBy(SpeakingDaysTable.dayOrder to SortOrder.ASC)
+            .map { dayRow ->
+                val dayId = dayRow[SpeakingDaysTable.id]
+
+                val totalParaExpr = SpeakingParagraphsTable.id.count()
+                val totalParas: Long = SpeakingParagraphsTable
+                    .slice(totalParaExpr)
+                    .select { SpeakingParagraphsTable.speakingDayId eq dayId }
                     .firstOrNull()
-                    ?.get(favoriteCountExpr) ?: 0L).toInt()
+                    ?.get(totalParaExpr) ?: 0L
 
-                val list_speaking_day = SpeakingDaysTable
-                    .select { SpeakingDaysTable.courseId eq courseId }
-                    .orderBy(SpeakingDaysTable.dayOrder to SortOrder.ASC)
-                    .map { dayRow ->
-
-                        val dayId = dayRow[SpeakingDaysTable.id]
-
-                        // ===== Tổng paragraph =====
-                        val totalParaExpr = SpeakingParagraphsTable.id.count()
-
-                        val totalParas: Long = SpeakingParagraphsTable
-                            .slice(totalParaExpr)
-                            .select { SpeakingParagraphsTable.speakingDayId eq dayId }
-                            .firstOrNull()
-                            ?.get(totalParaExpr) ?: 0L
-
-                        // ===== Paragraph đã làm =====
-                        val doneParaExpr = SpeakingParagraphResultsTable.paragraphId.count()
-
-                        val doneParas: Long =
-                            (SpeakingParagraphResultsTable
-                                .innerJoin(SpeakingParagraphsTable)
-                                .slice(doneParaExpr)
-                                .select {
-                                    (SpeakingParagraphsTable.speakingDayId eq dayId) and
-                                            (SpeakingParagraphResultsTable.userId eq userId)
-                                }
-                                .firstOrNull()
-                                ?.get(doneParaExpr) ?: 0L)
-
-                        // ===== % completed =====
-                        val completed =
-                            if (totalParas == 0L) 0
-                            else ((doneParas * 100) / totalParas).toInt()
-
-                        ShortSpeakingDayDto(
-                            title = dayRow[SpeakingDaysTable.title] ?: "",
-                            completed = completed
-                        )
+                val doneParaExpr = SpeakingParagraphResultsTable.paragraphId.count()
+                val doneParas: Long = (SpeakingParagraphResultsTable
+                    .innerJoin(SpeakingParagraphsTable)
+                    .slice(doneParaExpr)
+                    .select {
+                        (SpeakingParagraphsTable.speakingDayId eq dayId) and
+                                (SpeakingParagraphResultsTable.userId eq userId)
                     }
+                    .firstOrNull()
+                    ?.get(doneParaExpr) ?: 0L)
 
+                val completed = if (totalParas == 0L) 0 else ((doneParas * 100) / totalParas).toInt()
 
-                SpeakingCourseDetailDto(
-                    id = courseId.value,
-                    thumbnail_url = row[CoursesTable.thumbnailUrl],
-                    creator = CreatorDto(
-                        name = row[UsersTable.name],
-                        image = row[UsersTable.avatarUrl]   // nếu có cột này
-                    ),
-                    type = row[TopicsTable.name],
-                    is_favorite = isFavorite,
-                    title = row[CoursesTable.title],
-                    studying_user_count = studyingUserCount,
-                    favorite_user_count = favoriteUserCount,
-                    description = row[CoursesTable.description],
-                    list_speaking_day = list_speaking_day
+                ShortSpeakingDayDto(
+                    title = dayRow[SpeakingDaysTable.title] ?: "",
+                    completed = completed
                 )
             }
+
+        // Trả về DTO cuối cùng
+        SpeakingCourseDetailDto(
+            id = courseIdEntity.value,
+            thumbnail_url = row[CoursesTable.thumbnailUrl],
+            creator = CreatorDto(
+                name = row[UsersTable.name],
+                image = row[UsersTable.avatarUrl]
+            ),
+            type = row[TopicsTable.name],
+            typeColor = row[TopicsTable.color],
+            is_favorite = isFavorite,
+            title = row[CoursesTable.title],
+            studying_user_count = studyingUserCount,
+            favorite_user_count = favoriteUserCount,
+            description = row[CoursesTable.description],
+            deckId = row[CoursesTable.deckId]!!.value,
+            list_speaking_day = list_speaking_day
+        )
     }
     suspend fun getFeaturedCourses(userId: Int): List<ShortCourseDto> = dbQuery {
 

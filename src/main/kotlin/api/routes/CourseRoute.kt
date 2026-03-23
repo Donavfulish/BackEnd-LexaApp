@@ -1,7 +1,7 @@
 package com.lexa.api.routes
 
-import api.models.dto.ApiResponse
-import api.models.dto.CreateCourseRequest
+import api.config.getUserId
+import io.ktor.server.auth.authenticate
 import api.models.dto.errorResponse
 import api.models.dto.successResponse
 import com.lexa.api.services.CoursesService
@@ -116,17 +116,24 @@ fun Route.courseRoutes(coursesService: CoursesService) {
 
     }
     route("/api/courses/{courseId}/speaking-days") {
+        authenticate("auth-jwt") {
+            get {
+                val userId = call.getUserId()
+                val courseId: Long = call.parameters["courseId"]!!.toLong()
+                val courses = coursesService.getSpeakingDayCourse(userId!!, courseId)
 
-        get {
-            val courseId: Long = call.parameters["courseId"]!!.toLong()
-            val courses = coursesService.getSpeakingDayCourses(10, courseId)
-
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(courses, "Lấy danh sách khóa học speaking day thành công")
-            )
+                if (courses == null) {
+                    call.respond(
+                        HttpStatusCode.NotFound,
+                        errorResponse("Không tìm thấy khóa học hoặc khóa học đang ở chế độ riêng tư")
+                    )
+                } else {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        successResponse(courses, "Lấy chi tiết khóa học thành công")
+                    )
+                }
+            }
         }
-
-
     }
 }

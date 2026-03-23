@@ -32,11 +32,13 @@ data class SpeakingCourseDetailDto(
     val thumbnail_url: String?,
     val creator: CreatorDto,
     val type: String?,
+    val typeColor: String?,
     val is_favorite: Boolean? ,
     val title: String,
     val studying_user_count: Int,
     val favorite_user_count: Int,
     val description: String?,
+    val deckId: Long,
     val list_speaking_day: List<ShortSpeakingDayDto>
 )
 

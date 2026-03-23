@@ -18,7 +18,9 @@ data class GetProfileResponse  (
     val fullName: String?,
     @Serializable(with = DateSerializer::class)
     val DoB: Date?,
-    val address: String?
+    val address: String?,
+    val avatarUrl: String?,
+    val email: String?,
 )
 
 

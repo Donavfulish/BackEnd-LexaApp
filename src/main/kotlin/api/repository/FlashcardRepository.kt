@@ -18,16 +18,16 @@ class FlashcardRepository {
             .select { FlashcardsTable.deckId eq deckId }
             .map { row ->
                 DetailFlashcard(
-                    id = row[FlashcardsTable.id].value.toInt(), // Ép sang Int theo DTO
+                    id = row[FlashcardsTable.id].value.toInt(),
                     word = row[FlashcardsTable.word],
                     transcription = row[FlashcardsTable.transcription] ?: "",
-                    type = row[FlashcardsTable.type]?.name ?: "", // Lấy tên Enum (VocabType)
+                    type = row[FlashcardsTable.type]?.name ?: "",
                     deckId = row[FlashcardsTable.deckId].value.toInt(),
                     imageUrl = row[FlashcardsTable.imageUrl],
+                    audioUrl = row[FlashcardsTable.audioUrl],
                     meaning = row[FlashcardsTable.meaningVi] ?: "",
                     example = row[FlashcardsTable.example],
-                    partOfSpeech = row[PartOfSpeechesTable.name] ?: "" // Lấy tên loại từ từ bảng Join
-                )
+                    partOfSpeech = row[PartOfSpeechesTable.name] ?: "",)
             }
     }
 

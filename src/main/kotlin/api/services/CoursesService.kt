@@ -17,8 +17,8 @@ class CoursesService (
     suspend fun getAllCourses(userId: Int): List<ShortCourseDto> {
         return courseRepository.getAllCourses(userId)
     }
-    suspend fun getSpeakingDayCourses(userId: Int, courseId: Long): List<SpeakingCourseDetailDto> {
-        return courseRepository.getSpeakingDayCourses(userId, courseId)
+    suspend fun getSpeakingDayCourse(userId: Int, courseId: Long): SpeakingCourseDetailDto? {
+        return courseRepository.getSpeakingDayCourse(userId, courseId)
     }
     suspend fun getTopStudiedCourses(userId: Int): List<ShortCourseDto> {
         return courseRepository.getTopStudiedCourses(userId)

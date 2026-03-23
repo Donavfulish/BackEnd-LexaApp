@@ -10,9 +10,10 @@ data class DetailFlashcard(
     val transcription: String,
     val type: String,
     val deckId: Int,
-    val imageUrl: String? = null,
+    val imageUrl: String?,
+    val audioUrl: String?,
     val meaning: String,
-    val example: String? = null,
+    val example: String?,
     val partOfSpeech: String
 )
 

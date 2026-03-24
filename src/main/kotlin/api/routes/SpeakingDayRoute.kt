@@ -18,7 +18,7 @@ fun Route.speakingDayRoutes(speakingDaySerice: SpeakingDayService) {
 
         get {
             val speakingDayId: Long = call.parameters["speakingDayId"]!!.toLong()
-           val speakingDay = speakingDaySerice.getParagraphSpeakingDay(speakingDayId);
+            val speakingDay = speakingDaySerice.getParagraphSpeakingDay(speakingDayId);
             call.respond(
                 HttpStatusCode.OK,
                 successResponse(speakingDay, "Lấy danh sách paragraph cua speaking day thành công")

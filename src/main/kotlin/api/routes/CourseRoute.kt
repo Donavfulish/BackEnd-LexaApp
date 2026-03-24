@@ -112,14 +112,15 @@ fun Route.courseRoutes(coursesService: CoursesService) {
                 successResponse(courses, "Lấy danh sách khóa học của tôi  thành công")
             )
         }
-
-
     }
+
     route("/api/courses/{courseId}/speaking-days") {
-        authenticate("auth-jwt") {
+        //authenticate("auth-jwt") {
             get {
-                val userId = call.getUserId()
-                val courseId: Long = call.parameters["courseId"]!!.toLong()
+//                val userId = call.getUserId()
+//                val courseId: Long = call.parameters["courseId"]!!.toLong()
+                val userId = 11
+                val courseId: Long = 17
                 val courses = coursesService.getSpeakingDayCourse(userId!!, courseId)
 
                 if (courses == null) {
@@ -133,7 +134,7 @@ fun Route.courseRoutes(coursesService: CoursesService) {
                         successResponse(courses, "Lấy chi tiết khóa học thành công")
                     )
                 }
-            }
+            //}
         }
     }
 }

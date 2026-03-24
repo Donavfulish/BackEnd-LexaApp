@@ -1,6 +1,8 @@
 package api.routes
 
 import api.models.dto.CreateParagraphRequest
+import api.models.dto.DeleteParagraphRequest
+import api.models.dto.UpdateParagraphRequest
 import api.models.dto.errorResponse
 import api.models.dto.successResponse
 import api.services.ParagraphService
@@ -58,6 +60,75 @@ fun Route.paragraphRoute(paragraphService: ParagraphService) {
                     HttpStatusCode.InternalServerError,
                     errorResponse("Lỗi hệ thống: ${e.localizedMessage}")
                 )
+            }
+        }
+
+        patch("/{paragraphId}/info") {
+            try {
+                val userRole = "teacher" // TODO: Lấy từ Auth Token
+
+                val idString = call.parameters["paragraphId"]
+                if (idString == null) {
+                    call.respond(HttpStatusCode.BadRequest, errorResponse("Thiếu paragraphId"))
+                    return@patch
+                }
+                val paragraphId = idString.toLong()
+
+                val request = call.receive<UpdateParagraphRequest>()
+                val result = paragraphService.updateParagraphInfo(paragraphId, request, userRole)
+
+                result.fold(
+                    onSuccess = { data ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            // Ghi chú: Đổi message để phù hợp ngữ cảnh Update
+                            successResponse(data, "Update paragraph info successfully")
+                        )
+                    },
+                    onFailure = { exception ->
+                        if (exception.message == "FORBIDDEN_ROLE") {
+                            call.respond(HttpStatusCode.Forbidden, errorResponse("Chỉ giáo viên mới có quyền cập nhật."))
+                        } else {
+                            call.respond(HttpStatusCode.BadRequest, errorResponse(exception.message ?: "Lỗi cập nhật"))
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống: ${e.localizedMessage}"))
+            }
+        }
+
+        delete("/{paragraphId}") {
+            try {
+                val userRole = "teacher" // TODO: Lấy từ Auth Token
+
+                val idString = call.parameters["paragraphId"]
+                if (idString == null) {
+                    call.respond(HttpStatusCode.BadRequest, errorResponse("Thiếu paragraphId"))
+                    return@delete
+                }
+                val paragraphId = idString.toLong()
+
+                val request = call.receive<DeleteParagraphRequest>()
+                val result = paragraphService.deleteParagraph(paragraphId, request, userRole)
+
+                result.fold(
+                    onSuccess = {
+                        call.respond(
+                            HttpStatusCode.OK,
+                            successResponse(null, "Delete paragraph successfully")
+                        )
+                    },
+                    onFailure = { exception ->
+                        if (exception.message == "FORBIDDEN_ROLE") {
+                            call.respond(HttpStatusCode.Forbidden, errorResponse("Chỉ giáo viên mới có quyền xóa."))
+                        } else {
+                            call.respond(HttpStatusCode.BadRequest, errorResponse(exception.message ?: "Lỗi khi xóa"))
+                        }
+                    }
+                )
+            } catch (e: Exception) {
+                call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống: ${e.localizedMessage}"))
             }
         }
     }

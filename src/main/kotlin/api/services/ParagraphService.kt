@@ -1,7 +1,9 @@
 package api.services
 
 import api.models.dto.CreateParagraphRequest
+import api.models.dto.DeleteParagraphRequest
 import api.models.dto.ParagraphResponseDto
+import api.models.dto.UpdateParagraphRequest
 import api.repository.ParagraphRepository
 
 class ParagraphService(
@@ -28,6 +30,52 @@ class ParagraphService(
         return try {
             val result = paragraphRepository.createParagraph(request)
             Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateParagraphInfo(
+        paragraphId: Long,
+        request: UpdateParagraphRequest,
+        userRole: String
+    ): Result<ParagraphResponseDto> {
+        if (userRole != "teacher") {
+            return Result.failure(Exception("FORBIDDEN_ROLE"))
+        }
+
+        return try {
+            val isUpdated = paragraphRepository.updateParagraphInfo(paragraphId, request)
+            if (isUpdated) {
+                // Lấy lại data mới nhất từ DB để trả về cho Client
+                val updatedData = paragraphRepository.getParagraphById(paragraphId)
+                    ?: return Result.failure(Exception("Không tìm thấy dữ liệu sau khi cập nhật"))
+                Result.success(updatedData)
+            } else {
+                Result.failure(Exception("Không tìm thấy paragraph với ID này để cập nhật"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+
+    suspend fun deleteParagraph(
+        paragraphId: Long,
+        request: DeleteParagraphRequest,
+        userRole: String
+    ): Result<Unit> {
+        if (userRole != "teacher") {
+            return Result.failure(Exception("FORBIDDEN_ROLE"))
+        }
+
+        return try {
+            val isDeleted = paragraphRepository.deleteParagraph(paragraphId)
+            if (isDeleted) {
+                Result.success(Unit)
+            } else {
+                Result.failure(Exception("Không tìm thấy paragraph với ID này để xóa"))
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }

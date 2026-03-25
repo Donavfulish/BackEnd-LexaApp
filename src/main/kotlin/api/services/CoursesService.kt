@@ -2,6 +2,8 @@ package com.lexa.api.services
 
 import api.models.dto.ShortCourseDto
 import api.models.dto.CreateCourseRequest
+import api.models.dto.GetFeaturedCourseResponse
+import api.models.dto.GetStudyingCourseResponse
 import api.models.dto.SpeakingCourseDetailDto
 import api.repository.CoursesRepository
 
@@ -11,19 +13,19 @@ class CoursesService (
 ) {
 
 
-    suspend fun getFeaturedCourses(userId: Int): List<ShortCourseDto> {
+    suspend fun getFeaturedCourses(userId: Int): List<GetFeaturedCourseResponse> {
         return courseRepository.getFeaturedCourses(userId)
     }
     suspend fun getAllCourses(userId: Int): List<ShortCourseDto> {
         return courseRepository.getAllCourses(userId)
     }
-    suspend fun getSpeakingDayCourses(userId: Int, courseId: Long): List<SpeakingCourseDetailDto> {
-        return courseRepository.getSpeakingDayCourses(userId, courseId)
+    suspend fun getSpeakingDayCourse(userId: Int, courseId: Long): SpeakingCourseDetailDto? {
+        return courseRepository.getSpeakingDayCourse(userId, courseId)
     }
-    suspend fun getTopStudiedCourses(userId: Int): List<ShortCourseDto> {
+    suspend fun getTopStudiedCourses(userId: Int): List<GetFeaturedCourseResponse> {
         return courseRepository.getTopStudiedCourses(userId)
     }
-    suspend fun getStudyingCourses(userId: Int): List<ShortCourseDto> {
+    suspend fun getStudyingCourses(userId: Int): List<GetStudyingCourseResponse> {
         return courseRepository.getStudyingCourses(userId)
     }
 

@@ -13,7 +13,9 @@ class ProfileRepository {
                 UsersTable.id,
                 UsersTable.name,
                 UsersTable.dateOfBirth,
-                UsersTable.address
+                UsersTable.address,
+                UsersTable.avatarUrl,
+                UsersTable.email,
             )
             .select { UsersTable.id eq userId }
             .map {row ->
@@ -25,7 +27,9 @@ class ProfileRepository {
                     id = row[UsersTable.id].value,
                     fullName = row[UsersTable.name],
                     DoB = utilDate,
-                    address = row[UsersTable.address]
+                    address = row[UsersTable.address],
+                    avatarUrl = row[UsersTable.avatarUrl],
+                    email = row[UsersTable.email],
                 )
             }
             .single()

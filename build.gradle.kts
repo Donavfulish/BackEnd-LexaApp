@@ -6,6 +6,7 @@ plugins {
 
 group = "com.lexa"
 version = "0.0.1"
+val ktor_version = "2.3.x"
 
 application {
     mainClass = "io.ktor.server.netty.EngineMain"
@@ -52,4 +53,14 @@ dependencies {
 
     // Mail Service
     implementation("com.sun.mail:jakarta.mail:2.0.1")
+
+    // Engine CIO cho Client
+    implementation("io.ktor:ktor-client-cio:$ktor_version")
+
+    // Plugin xử lý JSON
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+
+    // Thư viện Serialization cơ bản
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.x")
 }

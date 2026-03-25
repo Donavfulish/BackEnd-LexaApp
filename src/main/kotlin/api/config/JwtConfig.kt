@@ -1,5 +1,6 @@
 package api.config
 
+import api.models.dto.GoogleUserInfo
 import api.models.dto.UserInfo
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
@@ -27,6 +28,14 @@ object JwtConfig {
         .withIssuer(dotenv["JWT_ISSUER"])
         .withClaim("id", userInfo.id)
         .withClaim("type", "access")
+        .withExpiresAt(Date(System.currentTimeMillis() + validityInMs))
+        .sign(algorithm)
+
+    fun generateGoogleAccessToken(googleUserInfo: GoogleUserInfo): String = JWT.create()
+        .withSubject(googleUserInfo.toString())
+        .withIssuer(dotenv["JWT_ISSUER"])
+        .withClaim("id", googleUserInfo.sub)
+        .withClaim("type", "google-access")
         .withExpiresAt(Date(System.currentTimeMillis() + validityInMs))
         .sign(algorithm)
 

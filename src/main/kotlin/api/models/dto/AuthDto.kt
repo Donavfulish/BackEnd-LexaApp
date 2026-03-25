@@ -12,6 +12,14 @@ data class LoginRequest(
 )
 
 @Serializable
+data class GoogleUserInfo(
+    val sub: String? = null,          // google_id (duy nhất, không đổi)
+    val name: String,
+    val email: String,
+    val picture: String? = null
+)
+
+@Serializable
 data class SignupRequest(
     val name: String,
     val email: String,

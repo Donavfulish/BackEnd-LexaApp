@@ -1,8 +1,10 @@
 package api.routes
 
+import api.config.JwtConfig
 import api.config.getUserId
 import api.models.dto.CreateCourseRequest
 import api.models.dto.ErrorResponse
+import api.models.dto.GoogleUserInfo
 import api.models.dto.LoginRequest
 import api.models.dto.OtpRequest
 import api.models.dto.OtpVerify
@@ -10,17 +12,27 @@ import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
 import api.models.dto.successResponse
 import api.services.AuthService
+import com.lexa.api.plugins.applicationHttpClient
+import com.lexa.api.plugins.redirects
 import com.lexa.api.services.CoursesService
+import io.ktor.client.call.body
+import io.ktor.client.request.get
+import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.URLBuilder
+import io.ktor.http.headers
+import io.ktor.server.auth.OAuthAccessTokenResponse
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
+import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
+import io.ktor.server.sessions.sessions
 
 fun Route.authRoutes(authService: AuthService) {
     route("api/auth/login") {
@@ -96,6 +108,36 @@ fun Route.authRoutes(authService: AuthService) {
 
     route("/api/auth/me") {
 
+    }
+
+
+    route("/api/auth/oauth/google-callback") {
+        get() {
+            val principal: OAuthAccessTokenResponse.OAuth2? = call.principal()
+
+            if (principal == null) call.respondRedirect("/login?error=failed")
+
+            val userInfo: GoogleUserInfo = applicationHttpClient.get("https://www.googleapis.com/oauth2/v3/userinfo") {
+                headers {
+                    append(HttpHeaders.Authorization, "Bearer ${principal!!.accessToken}")
+                }
+            }.body()
+
+            val googleAccessToken = JwtConfig.generateGoogleAccessToken(userInfo)
+
+            val state = principal!!.state ?: ""
+            val baseRedirect = redirects.remove(state) ?: "lexa://auth-success"
+
+            // Lưu ý: encode URL các thành phần như name hoặc email để tránh lỗi ký tự đặc biệt
+            val finalUrl = URLBuilder(baseRedirect).apply {
+                parameters.append("token", googleAccessToken)
+                parameters.append("email", userInfo.email)
+                parameters.append("name", userInfo.name)
+                userInfo.picture?.let { parameters.append("avatar", it) }
+            }.buildString()
+
+            call.respondRedirect(finalUrl)
+        }
     }
 
     route("/api/auth/google") {

@@ -43,8 +43,6 @@ class ParagraphRepository {
 
     suspend fun updateParagraphInfo(paragraphId: Long, request: UpdateParagraphRequest): Boolean = dbQuery {
         val updatedRows = SpeakingParagraphsTable.update({ SpeakingParagraphsTable.id eq paragraphId }) {
-            it[speakingDayId] = request.speakingDayId
-            it[paragraphOrder] = request.paragraphOrder
             // Chỉ update nếu client có truyền giá trị
             request.paragraph?.let { paragraphValue -> it[paragraph] = paragraphValue }
             request.audioUrl?.let { audioValue -> it[audioUrl] = audioValue }

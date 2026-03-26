@@ -1,4 +1,4 @@
-package api.plugins
+package com.lexa.api.plugins
 
 import api.repository.AuthRepository
 import api.repository.CoursesRepository

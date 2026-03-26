@@ -30,8 +30,6 @@ data class ParagraphResponseDto(
 
 @Serializable
 data class UpdateParagraphRequest(
-    val speakingDayId: Long,
-    val paragraphOrder: Long? = null,
     val paragraph: String? = null,
     val audioUrl: String? = null
 )

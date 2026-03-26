@@ -1,8 +1,8 @@
 package api.routes
 
 import api.models.dto.CreateParagraphRequest
-import api.models.dto.DeleteParagraphRequest
 import api.models.dto.UpdateParagraphRequest
+import api.models.dto.UpdateParagraphResultRequest
 import api.models.dto.errorResponse
 import api.models.dto.successResponse
 import api.services.ParagraphService
@@ -109,8 +109,7 @@ fun Route.paragraphRoute(paragraphService: ParagraphService) {
                 }
                 val paragraphId = idString.toLong()
 
-                val request = call.receive<DeleteParagraphRequest>()
-                val result = paragraphService.deleteParagraph(paragraphId, request, userRole)
+                val result = paragraphService.deleteParagraph(paragraphId, userRole)
 
                 result.fold(
                     onSuccess = {
@@ -129,6 +128,39 @@ fun Route.paragraphRoute(paragraphService: ParagraphService) {
                 )
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống: ${e.localizedMessage}"))
+            }
+        }
+
+        // 5. Thay đổi thông tin kết quả paragraph (student)
+        patch("/result") {
+            try {
+                // TODO: Lấy userId thực tế từ Auth Token
+                // val userId = call.getUserId()
+                val userId = 11
+
+                val request = call.receive<UpdateParagraphResultRequest>()
+                val result = paragraphService.updateParagraphResult(userId, request)
+
+                result.fold(
+                    onSuccess = { data ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            // Mình đổi thông báo "Get paragraph count successfully" thành thông báo Update
+                            successResponse(data, "Update paragraph result successfully")
+                        )
+                    },
+                    onFailure = { exception ->
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            errorResponse(exception.message ?: "Lỗi khi cập nhật kết quả đoạn văn")
+                        )
+                    }
+                )
+            } catch (e: Exception) {
+                call.respond(
+                    HttpStatusCode.InternalServerError,
+                    errorResponse("Lỗi hệ thống: ${e.localizedMessage}")
+                )
             }
         }
     }

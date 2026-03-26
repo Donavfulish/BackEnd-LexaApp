@@ -1,9 +1,10 @@
 package api.services
 
 import api.models.dto.CreateParagraphRequest
-import api.models.dto.DeleteParagraphRequest
 import api.models.dto.ParagraphResponseDto
+import api.models.dto.ParagraphResultResponseDto
 import api.models.dto.UpdateParagraphRequest
+import api.models.dto.UpdateParagraphResultRequest
 import api.repository.ParagraphRepository
 
 class ParagraphService(
@@ -62,7 +63,6 @@ class ParagraphService(
 
     suspend fun deleteParagraph(
         paragraphId: Long,
-        request: DeleteParagraphRequest,
         userRole: String
     ): Result<Unit> {
         if (userRole != "teacher") {
@@ -76,6 +76,23 @@ class ParagraphService(
             } else {
                 Result.failure(Exception("Không tìm thấy paragraph với ID này để xóa"))
             }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateParagraphResult(
+        userId: Int,
+        request: UpdateParagraphResultRequest
+    ): Result<ParagraphResultResponseDto> {
+
+        if (request.paragraphId <= 0) {
+            return Result.failure(Exception("ID đoạn văn không hợp lệ"))
+        }
+
+        return try {
+            val result = paragraphRepository.upsertParagraphResult(userId, request)
+            Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)
         }

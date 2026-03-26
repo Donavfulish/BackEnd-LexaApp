@@ -19,6 +19,9 @@ import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
 import io.ktor.server.response.respondRedirect
+import io.ktor.server.sessions.Sessions
+import io.ktor.server.sessions.cookie
+import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ConcurrentHashMap
 
@@ -26,7 +29,18 @@ val dotenv = dotenv()
 
 val redirects = ConcurrentHashMap<String, String>()
 
+@Serializable
+data class UserSession(val state: String)
+
 fun Application.configureSecurity(httpClient: HttpClient) {
+    install(Sessions) {
+        cookie<UserSession>("OAUTH_STATE") {
+            cookie.path = "/"
+            cookie.httpOnly = true
+            cookie.extensions["SameSite"] = "Lax" // Quan trọng để trình duyệt/webview chấp nhận cookie
+        }
+    }
+
     install(Authentication) {
         jwt("auth-jwt") { // Đây chính là "middleware"
             verifier(JwtConfig.verifier)
@@ -46,7 +60,7 @@ fun Application.configureSecurity(httpClient: HttpClient) {
                 )
             }
         }
-        oauth("auth-oauth-google") {
+        oauth("oauth-google") {
             // Cấu hình URL callback (phải khớp với Google Console)
             urlProvider = { "http://localhost:8081/api/auth/oauth/google-callback" }
 
@@ -58,13 +72,14 @@ fun Application.configureSecurity(httpClient: HttpClient) {
                     requestMethod = HttpMethod.Post,
                     clientId = dotenv["GOOGLE_CLIENT_ID"],
                     clientSecret = dotenv["GOOGLE_CLIENT_SECRET"],
-                    defaultScopes = listOf("https://www.googleapis.com/auth/userinfo.profile"),
+                    defaultScopes = listOf(
+                        "https://www.googleapis.com/auth/userinfo.profile",
+                        "https://www.googleapis.com/auth/userinfo.email" // THÊM DÒNG NÀY
+                    ),
                     extraAuthParameters = listOf("access_type" to "offline"),
                     onStateCreated = { call, state ->
-                        // Lưu lại URL mà user muốn quay lại sau khi login thành công
-                        call.request.queryParameters["redirectUrl"]?.let {
-                            redirects[state] = it
-                        }
+                        val target = call.request.queryParameters["redirectUrl"] ?: "lexa://auth-success"
+                        redirects[state] = target
                     }
                 )
             }

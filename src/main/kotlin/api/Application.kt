@@ -11,7 +11,21 @@ import com.lexa.api.plugins.applicationHttpClient
 import com.lexa.api.plugins.configureMonitoring
 import io.ktor.client.HttpClient
 
+
+// Mở cmd chạy lệnh dưới trước khi chạy Frontend + Backend
+// adb reverse tcp:8081 tcp:8081
+
 fun main(args: Array<String>) {
+    try {
+        val process = Runtime.getRuntime().exec(arrayOf("adb", "reverse", "tcp:8081", "tcp:8081"))
+        val exitCode = process.waitFor()
+        if (exitCode == 0) {
+            println("--- ADB Reverse: Success (Port 8081) ---")
+        }
+    } catch (e: Exception) {
+        println("--- ADB Reverse: Skipped (Không tìm thấy thiết bị hoặc ADB chưa cài đặt) ---")
+    }
+
     EngineMain.main(args)
 }
 

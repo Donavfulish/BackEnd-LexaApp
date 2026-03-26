@@ -2,6 +2,7 @@ package api.routes
 
 import api.config.JwtConfig
 import api.config.getUserId
+import api.config.getUserRole
 import api.models.dto.CreateCourseRequest
 import api.models.dto.ErrorResponse
 import api.models.dto.GoogleUserInfo
@@ -17,10 +18,14 @@ import com.lexa.api.plugins.redirects
 import com.lexa.api.services.CoursesService
 import io.ktor.client.call.body
 import io.ktor.client.request.get
+import io.ktor.client.request.header
+import io.ktor.client.statement.bodyAsText
+import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLBuilder
 import io.ktor.http.headers
+import io.ktor.server.application.call
 import io.ktor.server.auth.OAuthAccessTokenResponse
 import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
@@ -30,6 +35,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
+import io.ktor.server.routing.header
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.sessions.sessions
@@ -78,10 +84,10 @@ fun Route.authRoutes(authService: AuthService) {
         authenticate("auth-jwt") { // Bọc phương thức trong hàm này để xác thực token
             get {
                 val userId = call.getUserId()
-
+                val userRole = call.getUserRole()
                 call.respond(
                     HttpStatusCode.OK,
-                    successResponse("id của bạn là $userId", "Bạn đã đăng nhập")
+                    successResponse("id của bạn là $userId với role $userRole", "Bạn đã đăng nhập")
                 )
             }
         }
@@ -110,18 +116,32 @@ fun Route.authRoutes(authService: AuthService) {
 
     }
 
+    authenticate("oauth-google") {
+        get("/api/auth/login/google") {
+            // Ktor sẽ tự động redirect sang Google sau khi block này chạy xong
+        }
 
-    route("/api/auth/oauth/google-callback") {
-        get() {
-            val principal: OAuthAccessTokenResponse.OAuth2? = call.principal()
+        get("/api/auth/oauth/google-callback") {
+            val params = call.request.queryParameters
+            println("Callback params: ${params.entries()}") // Xem có 'code' và 'state' không
 
-            if (principal == null) call.respondRedirect("/login?error=failed")
+            val principal = call.principal<OAuthAccessTokenResponse.OAuth2>()
 
-            val userInfo: GoogleUserInfo = applicationHttpClient.get("https://www.googleapis.com/oauth2/v3/userinfo") {
-                headers {
-                    append(HttpHeaders.Authorization, "Bearer ${principal!!.accessToken}")
-                }
-            }.body()
+            if (principal == null) {
+                call.respondRedirect("/login?error=failed")
+                return@get
+            }
+
+            val token = principal.accessToken.trim()
+            val response = applicationHttpClient.get("https://www.googleapis.com/oauth2/v3/userinfo") {
+                header(HttpHeaders.Authorization, "Bearer $token")
+                header(HttpHeaders.Accept, ContentType.Application.Json)
+            }
+
+            val jsonString = response.bodyAsText()
+            println("Google Response JSON: $jsonString") // Xem nó có email/name thật không
+
+            val userInfo = response.body<GoogleUserInfo>()
 
             val googleAccessToken = JwtConfig.generateGoogleAccessToken(userInfo)
 

@@ -27,6 +27,7 @@ object JwtConfig {
         .withSubject(userInfo.toString())
         .withIssuer(dotenv["JWT_ISSUER"])
         .withClaim("id", userInfo.id)
+        .withClaim("role", userInfo.role.toString())
         .withClaim("type", "access")
         .withExpiresAt(Date(System.currentTimeMillis() + validityInMs))
         .sign(algorithm)
@@ -51,4 +52,9 @@ object JwtConfig {
 fun ApplicationCall.getUserId(): Int? {
     val principal = this.principal<JWTPrincipal>()
     return principal?.payload?.getClaim("id")?.asInt()
+}
+
+fun ApplicationCall.getUserRole(): String? {
+    val principal = this.principal<JWTPrincipal>()
+    return principal?.payload?.getClaim("role")?.asString()
 }

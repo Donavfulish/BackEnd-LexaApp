@@ -21,6 +21,8 @@ import com.lexa.api.services.CoursesService
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
+import io.ktor.server.sessions.Sessions
+import io.ktor.server.sessions.cookie
 
 fun Application.configureRouting() {
     routing {

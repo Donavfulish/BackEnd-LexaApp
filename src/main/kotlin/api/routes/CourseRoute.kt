@@ -1,6 +1,8 @@
 package com.lexa.api.routes
 
 import api.config.getUserId
+import api.models.dto.CreateCourseRequest
+import api.models.dto.EditCourseRequest
 import io.ktor.server.auth.authenticate
 import api.models.dto.errorResponse
 import api.models.dto.successResponse
@@ -17,7 +19,12 @@ fun Route.courseRoutes(coursesService: CoursesService) {
     route("/api/courses/featured") {
 
         get {
-            val courses = coursesService.getFeaturedCourses(10)
+            val userId = call.getUserId() ?: return@get call.respond(
+                HttpStatusCode.Unauthorized,
+                errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+            )
+
+            val courses = coursesService.getFeaturedCourses(userId)
 
             call.respond(
                 HttpStatusCode.OK,
@@ -30,7 +37,11 @@ fun Route.courseRoutes(coursesService: CoursesService) {
     route("/api/courses/studying") {
 
         get {
-            val courses = coursesService.getStudyingCourses(10)
+            val userId = call.getUserId() ?: return@get call.respond(
+                HttpStatusCode.Unauthorized,
+                errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+            )
+            val courses = coursesService.getStudyingCourses(userId)
 
             call.respond(
                 HttpStatusCode.OK,
@@ -43,7 +54,11 @@ fun Route.courseRoutes(coursesService: CoursesService) {
     route("/api/courses/top-studied") {
 
         get {
-            val courses = coursesService.getTopStudiedCourses(10)
+            val userId = call.getUserId() ?: return@get call.respond(
+                HttpStatusCode.Unauthorized,
+                errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+            )
+            val courses = coursesService.getTopStudiedCourses(userId)
 
             call.respond(
                 HttpStatusCode.OK,
@@ -54,65 +69,166 @@ fun Route.courseRoutes(coursesService: CoursesService) {
 
     }
     route("/api/courses") {
+        authenticate("auth-jwt") { // Bọc phương thức trong hàm này để xác thực token
+            get {
+                val userId = call.getUserId() ?: return@get call.respond(
+                    HttpStatusCode.Unauthorized,
+                    errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+                val courses = coursesService.getAllCourses(userId)
 
-        get {
-            val courses = coursesService.getAllCourses(10)
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(courses, "Lấy danh sách tất cả khoá học  thành công")
+                )
+            }
+            post {
+                val userId = call.getUserId() ?: return@post call.respond(
+                    HttpStatusCode.Unauthorized,
+                    errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
 
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(courses, "Lấy danh sách tất cả khoá học  thành công")
-            )
+                val course = call.receive<CreateCourseRequest>()
+                val courseResult = coursesService.addCourse(userId,course )
+                courseResult.fold(
+                    onSuccess = { courseId ->
+                        call.respond(
+                            HttpStatusCode.Created,
+                            successResponse(courseId, "Tạo khóa học thành công")
+                        )
+                    },
+                    onFailure = { exception ->
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            errorResponse(exception.message ?: "Đã có lỗi xảy ra khi tạo khóa học")
+                        )
+                    }
+                )
+            }
+            post ("/{courseId}/favourite"){
+                val userId = call.getUserId() ?: return@post call.respond(
+                    HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+
+                val courseId = call.parameters["courseId"]?.toLongOrNull() ?: return@post call.respond(
+                    HttpStatusCode.BadRequest, errorResponse("ID khóa học không hợp lệ")
+                )
+
+                coursesService.favoriteCourse(userId, courseId).fold(
+                    onSuccess = {
+                        call.respond(HttpStatusCode.OK, successResponse(null, "Yêu thích khóa học thành công."))
+                    },
+                    onFailure = {
+                        call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống"))
+                    }
+                )
+            }
+            delete("/{courseId}/favourite") {
+                val userId = call.getUserId() ?: return@delete call.respond(
+                    HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+
+                val courseId = call.parameters["courseId"]?.toLongOrNull() ?: return@delete call.respond(
+                    HttpStatusCode.BadRequest, errorResponse("ID khóa học không hợp lệ")
+                )
+
+                coursesService.disFavoriteCourse(userId, courseId).fold(
+                    onSuccess = {
+                        call.respond(HttpStatusCode.OK, successResponse(null, "Bỏ yêu thích khóa học thành công."))
+                    },
+                    onFailure = {
+                        call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống"))
+                    }
+                )
+            }
         }
     }
 
     route("/api/user/me/course/favorite") {
+        authenticate("auth-jwt") { // Bọc phương thức trong hàm này để xác thực token
+            get() {
+                val userId = call.getUserId() ?: return@get call.respond(
+                    HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+                val courses = coursesService.getFavoriteCourses(userId)
 
-        get("/{id}") {
-            val idString = call.parameters["id"]
-            if(idString == null) {
-                call.respond(HttpStatusCode.BadRequest,errorResponse("Thiếu id"))
-                return@get
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(courses, "Lấy danh sách khóa yêu thích thành công")
+                )
             }
-            val id: Int = idString.toInt()
-            val courses = coursesService.getFavoriteCourses(id)
-
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(courses, "Lấy danh sách khóa yêu thích thành công")
-            )
         }
     }
 
-    route("/api/user/me/deck/favorite") {
-
-        get("/{id}") {
-            val idString = call.parameters["id"]
-            if(idString == null) {
-                call.respond(HttpStatusCode.BadRequest,errorResponse("Thiếu id"))
-                return@get
-            }
-            val id: Int = idString.toInt()
-            val courses = coursesService.getFavoriteDecks(id)
-
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(courses, "Lấy danh sách khóa yêu thích thành công")
-            )
-        }
-    }
-
-    // TODO: CHINH LAI ROUTE
     route("/api/users/me/courses") {
 
-        get {
-            val courses = coursesService.getMyCourses(10)
+        authenticate("auth-jwt") { // Bọc phương thức trong hàm này để xác thực token
+            get {
+                val userId = call.getUserId() ?: return@get call.respond(
+                    HttpStatusCode.Unauthorized,
+                    errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+                val courses = coursesService.getMyCourses(userId)
 
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(courses, "Lấy danh sách khóa học của tôi  thành công")
-            )
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(courses, "Lấy danh sách khóa học của tôi  thành công")
+                )
+            }
+            patch("/{courseId}") {
+                val userId = call.getUserId() ?: return@patch call.respond(
+                    HttpStatusCode.Unauthorized,
+                    errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+                val courseId = call.parameters["courseId"]?.toLongOrNull() ?: return@patch call.respond(
+                    HttpStatusCode.BadRequest, errorResponse("ID khóa học không hợp lệ")
+                )
+
+                val course = call.receive<EditCourseRequest>()
+                val courseResult = coursesService.editCourse(userId,courseId, course )
+                courseResult.fold(
+                    onSuccess = { courseId ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            successResponse(null, "Chỉnh sửa khóa học thành công")
+                        )
+                    },
+                    onFailure = { exception ->
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            errorResponse(exception.message ?: "Đã có lỗi xảy ra khi chỉnh sửa khóa học")
+                        )
+                    }
+                )
+            }
+            delete  ("/{courseId}") {
+
+                val userId = call.getUserId() ?: return@delete call.respond(
+                    HttpStatusCode.Unauthorized,
+                    errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+
+                val courseId = call.parameters["courseId"]?.toLongOrNull() ?: return@delete call.respond(
+                    HttpStatusCode.BadRequest, errorResponse("ID khóa học không hợp lệ")
+                )
+
+                val courseResult = coursesService.deleteCourse(userId,courseId )
+                courseResult.fold(
+                    onSuccess = { courseId ->
+                        call.respond(
+                            HttpStatusCode.OK,
+                            successResponse(null, "Xóa khóa học thành công")
+                        )
+                    },
+                    onFailure = { exception ->
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            errorResponse(exception.message ?: "Đã có lỗi xảy ra khi xóa khóa học")
+                        )
+                    }
+                )
+            }
         }
-
 
     }
     route("/api/courses/{courseId}/speaking-days") {

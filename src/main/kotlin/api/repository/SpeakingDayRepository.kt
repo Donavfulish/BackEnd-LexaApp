@@ -1,15 +1,24 @@
 package api.repository
 
+import api.models.dto.CreateSpeakingDayRequest
+import api.models.dto.EditSpeakingDayRequest
 import api.models.dto.ShortParagraphDto
 import api.models.dto.ShortParagraphSpeakingDayDto
+import api.models.tables.CoursesTable
 import api.models.tables.SpeakingDaysTable
 import api.models.tables.SpeakingParagraphResultsTable
 import api.models.tables.SpeakingParagraphsTable
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.SortOrder
+import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.max
 import org.jetbrains.exposed.sql.select
-
+import org.jetbrains.exposed.sql.update
+import org.jetbrains.exposed.sql.innerJoin
 class SpeakingDayRepository {
     suspend fun getParagraphSpeakingDay(speakingDayId: Long): List<ShortParagraphSpeakingDayDto> = dbQuery {
 
@@ -37,5 +46,82 @@ class SpeakingDayRepository {
                 )
             }
 
+    }
+
+    suspend fun addSpeakingDay(userId: Int, speakingDay: CreateSpeakingDayRequest): Long = dbQuery {
+        val course = CoursesTable
+            .select { CoursesTable.id eq speakingDay.courseId }
+            .singleOrNull() ?: throw IllegalArgumentException("Không tìm thấy khóa học này để thêm ngày")
+
+        if (course[CoursesTable.creatorId].value != userId) {
+            throw IllegalArgumentException("Bạn không có quyền thêm ngày vào khóa học của người khác")
+        }
+        val maxOrderExpr = SpeakingDaysTable.dayOrder.max()
+        val currentMaxOrder = SpeakingDaysTable
+            .slice(maxOrderExpr)
+            .select { SpeakingDaysTable.courseId eq speakingDay.courseId }
+            .singleOrNull()
+            ?.get(maxOrderExpr) ?: 0L
+        val nextOrder = currentMaxOrder + 1
+
+        SpeakingDaysTable.insertAndGetId {
+            it[this.courseId] = speakingDay.courseId
+            it[this.title] = speakingDay.title
+            it[this.dayOrder] = nextOrder
+        }.value
+    }
+    suspend fun editSpeakingDay(userId: Int, speakingDayId: Long, speakingDay: EditSpeakingDayRequest): Boolean = dbQuery {
+        val speakingDayWithCourse = SpeakingDaysTable
+            .innerJoin(CoursesTable, {SpeakingDaysTable.courseId},{ CoursesTable.id})
+            .select { SpeakingDaysTable.id eq speakingDayId }
+            .singleOrNull() ?: throw IllegalArgumentException("Không tìm thấy bài học này để chỉnh sửa")
+
+        val creatorIdInDb = speakingDayWithCourse[CoursesTable.creatorId].value
+        if (creatorIdInDb != userId) {
+            throw IllegalArgumentException("Bạn không có quyền chỉnh sửa bài học của người khác")
+        }
+        val updatedRows = SpeakingDaysTable.update({ SpeakingDaysTable.id eq speakingDayId }) {
+            it[this.title] = speakingDay.title
+            it[updatedAt] = java.time.LocalDateTime.now()
+        }
+
+        updatedRows > 0
+    }
+
+    suspend fun deleteSpeakingDay(userId: Int, speakingDayId: Long): Boolean = dbQuery {
+
+        val speakingDayWithCourse = SpeakingDaysTable
+            .innerJoin(CoursesTable, {SpeakingDaysTable.courseId}, { CoursesTable.id })
+            .select { SpeakingDaysTable.id eq speakingDayId }
+            .singleOrNull() ?: throw IllegalArgumentException("Không tìm thấy bài học này để xóa")
+
+        val creatorIdInDb = speakingDayWithCourse[CoursesTable.creatorId].value
+
+        if (creatorIdInDb != userId) {
+            throw IllegalArgumentException("Bạn không có quyền xóa bài học của người khác")
+        }
+
+        val dayToDelete = SpeakingDaysTable
+            .select { SpeakingDaysTable.id eq speakingDayId }
+            .singleOrNull() ?: return@dbQuery false
+
+        val targetCourseId = dayToDelete[SpeakingDaysTable.courseId] ?: return@dbQuery false
+        val targetOrder = dayToDelete[SpeakingDaysTable.dayOrder] ?: 0L
+
+
+        val deletedRows = SpeakingDaysTable.deleteWhere { SpeakingDaysTable.id eq speakingDayId }
+
+
+        if (deletedRows > 0) {
+            SpeakingDaysTable.update({
+                (SpeakingDaysTable.courseId eq targetCourseId) and
+                        (SpeakingDaysTable.dayOrder greater targetOrder)
+            }) {
+                with(SqlExpressionBuilder) {
+                    it.update(dayOrder, dayOrder - 1L)
+                }
+            }
+        }
+        deletedRows > 0
     }
 }

@@ -28,7 +28,7 @@ fun Application.configureRouting() {
         authRoutes(authService = AuthService(AuthRepository()))
         deckRoutes(deckService = DeckService(DeckRepository()))
         flashcardRoutes(flashcardService = FlashcardService(FlashcardRepository()))
-        speakingDayRoutes(speakingDaySerice = SpeakingDayService(SpeakingDayRepository()))
+        speakingDayRoutes(speakingDayService = SpeakingDayService(SpeakingDayRepository()))
         profileRoutes(profileService = ProfileService(ProfileRepository()))
 
     }

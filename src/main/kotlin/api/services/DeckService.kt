@@ -3,6 +3,7 @@ package api.services
 import api.models.dto.CreateDeckRequest
 import api.models.dto.DeckDto
 import api.models.dto.DeckResult
+import api.models.dto.ShortCourseDto
 import api.models.dto.UpdateDeckRequest
 import api.repository.DeckRepository
 
@@ -25,7 +26,9 @@ class DeckService(
             Result.failure(e)
         }
     }
-
+    suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> {
+        return deckRepository.getFavoriteDecks(userId)
+    }
     suspend fun addDeck(request: CreateDeckRequest) : Result<Long>{
         if (request.title.isBlank()) {
             return Result.failure(Exception("Tên bộ từ vựng không được để trống"))
@@ -55,6 +58,23 @@ class DeckService(
         return try {
             val id = deckRepository.deleteDeck(deckId);
             Result.success(id)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    suspend fun favoriteDeck(userId: Int, deckId: Long): Result<Boolean> {
+        return try {
+            val result = deckRepository.addFavoriteDeck(userId, deckId)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun disFavoriteDeck(userId: Int, deckId: Long): Result<Boolean> {
+        return try {
+            val result = deckRepository.removeFavoriteDeck(userId, deckId)
+            Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)
         }

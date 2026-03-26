@@ -1,5 +1,6 @@
 package api.routes
 
+import api.config.getUserId
 import api.models.dto.CreateDeckRequest
 import api.models.dto.UpdateDeckRequest
 import api.models.dto.errorResponse
@@ -100,4 +101,67 @@ fun Route.deckRoutes(deckService: DeckService) {
                 }
         }
     }
+
+    route("/api/user/me/deck/favorite") {
+        authenticate("auth-jwt") { // Bọc phương thức trong hàm này để xác thực token
+            get() {
+                val userId = call.getUserId() ?: return@get call.respond(
+                    HttpStatusCode.Unauthorized,
+                    errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+
+                val courses = deckService.getFavoriteDecks(userId)
+
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(courses, "Lấy danh sách khóa yêu thích thành công")
+                )
+            }
+        }
+    }
+    route("/api/decks") {
+
+        authenticate("auth-jwt") {
+
+
+            post("/{deckId}/favourite") {
+                val userId = call.getUserId() ?: return@post call.respond(
+                    HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+
+                val deckId = call.parameters["deckId"]?.toLongOrNull() ?: return@post call.respond(
+                    HttpStatusCode.BadRequest, errorResponse("ID bộ từ vựng không hợp lệ")
+                )
+
+                deckService.favoriteDeck(userId, deckId).fold(
+                    onSuccess = {
+                        call.respond(HttpStatusCode.OK, successResponse(null, "Yêu thích bộ từ vựng thành công"))
+                    },
+                    onFailure = {
+                        call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống"))
+                    }
+                )
+            }
+            delete("/{deckId}/favourite") {
+                val userId = call.getUserId() ?: return@delete call.respond(
+                    HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
+                )
+
+                val deckId = call.parameters["deckId"]?.toLongOrNull() ?: return@delete call.respond(
+                    HttpStatusCode.BadRequest, errorResponse("ID bộ từ vựng không hợp lệ")
+                )
+
+                deckService.disFavoriteDeck(userId, deckId).fold(
+                    onSuccess = {
+                        call.respond(HttpStatusCode.OK, successResponse(null, "Bỏ yêu thích bộ từ vựng thành công"))
+                    },
+                    onFailure = {
+                        call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống"))
+                    }
+                )
+            }
+        }
+    }
+
+
 }

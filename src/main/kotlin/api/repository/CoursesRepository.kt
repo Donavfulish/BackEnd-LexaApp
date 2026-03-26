@@ -3,6 +3,7 @@ package api.repository
 import api.models.dto.ShortCourseDto
 import api.models.dto.CreateCourseRequest
 import api.models.dto.CreatorDto
+import api.models.dto.EditCourseRequest
 import api.models.dto.GetFeaturedCourseResponse
 import api.models.dto.GetStudyingCourseResponse
 import api.models.dto.ShortSpeakingDayDto
@@ -24,8 +25,10 @@ import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.*
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import kotlin.collections.map
-
+import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.select
 // Nơi giao tiếp trực tiếp với database (nơi này sẽ được sử dụng models và dto)
 class CoursesRepository {
     suspend fun getAllCourses(userId: Int): List<ShortCourseDto> = dbQuery {
@@ -181,7 +184,6 @@ class CoursesRepository {
         )
     }
     suspend fun getFeaturedCourses(userId: Int): List<GetFeaturedCourseResponse> = dbQuery {
-
         CoursesTable
             .innerJoin(UsersTable)
             .leftJoin(TopicsTable)
@@ -194,7 +196,6 @@ class CoursesRepository {
                                 (UserFavoriteCoursesTable.userId eq userId)
                     }
                     .empty().not()
-
                 val studyingUserCount: Int = run {
                     val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
 
@@ -436,51 +437,37 @@ class CoursesRepository {
     }
 
 
-    suspend fun createCourse(request: CreateCourseRequest): Long = dbQuery {
-        CoursesTable.insertAndGetId {
-            it[topicId] = request.topicId
-            it[title] = request.title
-            it[description] = request.description
-            it[creatorId] = request.creatorId
-            it[privacy] = api.models.enum.PrivacyType.valueOf(request.privacy)
-        }.value
-    }
-
     suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> = dbQuery {
 
-        CoursesTable
-            .innerJoin(UsersTable)
-            .leftJoin(TopicsTable)
-            .innerJoin(UserFavoriteCoursesTable)
+        UserFavoriteCoursesTable
+            .innerJoin(CoursesTable, { UserFavoriteCoursesTable.courseId }, { CoursesTable.id })
+            .innerJoin(UsersTable, { CoursesTable.creatorId }, { UsersTable.id })
+            .leftJoin(TopicsTable, { CoursesTable.topicId }, { TopicsTable.id })
             .select {
-                (CoursesTable.privacy eq PrivacyType.PUBLIC) and
-                        (UserFavoriteCoursesTable.userId eq userId)
+                (UserFavoriteCoursesTable.userId eq userId) and
+                        (CoursesTable.privacy eq PrivacyType.PUBLIC)
             }
             .map { row ->
                 val courseId = row[CoursesTable.id]
                 val isFavorite = true
-                val studyingUserCount: Int = run {
-                    val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
-                    (SpeakingParagraphResultsTable
-                        .innerJoin(SpeakingParagraphsTable)
-                        .innerJoin(SpeakingDaysTable)
-                        .slice(learnerCountExpr)
-                        .select {
-                            SpeakingDaysTable.courseId eq courseId
-                        }
-                        .firstOrNull()
-                        ?.get(learnerCountExpr) ?: 0L
-                            ).toInt()
-                }
-                val vocabNumber = row[CoursesTable.deckId]?.let { dId ->
-                    FlashcardsTable.select { FlashcardsTable.deckId eq dId }.count()
-                } ?: 0L
-                val favoriteCountExpr = (UserFavoriteCoursesTable.userId.count())
-                val favoriteUserCount = (UserFavoriteCoursesTable
-                    .slice(favoriteCountExpr)
-                    .select { UserFavoriteCoursesTable.courseId eq courseId }
+
+                val studyingUserCount = SpeakingParagraphResultsTable
+                    .innerJoin(SpeakingParagraphsTable)
+                    .innerJoin(SpeakingDaysTable)
+                    .slice(SpeakingParagraphResultsTable.userId.countDistinct())
+                    .select { SpeakingDaysTable.courseId eq courseId }
                     .firstOrNull()
-                    ?.get(favoriteCountExpr) ?: 0L).toInt()
+                    ?.get(SpeakingParagraphResultsTable.userId.countDistinct())
+                    ?.toInt() ?: 0
+
+                val vocabNumber = row[CoursesTable.deckId]?.let { dId ->
+                    FlashcardsTable.select { FlashcardsTable.deckId eq dId }.count().toInt()
+                } ?: 0
+
+                val favoriteUserCount = UserFavoriteCoursesTable
+                    .select { UserFavoriteCoursesTable.courseId eq courseId }
+                    .count()
+                    .toInt()
 
                 ShortCourseDto(
                     id = courseId.value,
@@ -488,72 +475,100 @@ class CoursesRepository {
                     topic = TopicDto(
                         id = row[TopicsTable.id]?.value ?: 0,
                         name = row[TopicsTable.name] ?: "",
-                        colorHex = row[TopicsTable.color] ?: "#636AE8"),
+                        colorHex = row[TopicsTable.color] ?: "#636AE8"
+                    ),
                     title = row[CoursesTable.title],
                     description = row[CoursesTable.description] ?: "",
                     creator_name = row[UsersTable.name],
                     creator_avatar_url = row[UsersTable.avatarUrl] ?: "",
                     is_favorite = isFavorite,
-                    vocabNumber = vocabNumber.toInt(),
+                    vocabNumber = vocabNumber,
                     studying_user_count = studyingUserCount,
                     favorite_user_count = favoriteUserCount
                 )
             }
     }
 
-    suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> = dbQuery {
 
-        UserFavoriteDecksTable
-        UserFavoriteDecksTable
-            .innerJoin(CoursesTable, { deckId }, { deckId })
-            .innerJoin(UsersTable, { CoursesTable.creatorId }, { id })
-            .leftJoin(TopicsTable, { CoursesTable.topicId }, { id })
+
+    suspend fun createCourse(userId: Int, course: CreateCourseRequest): Long = dbQuery {
+        CoursesTable.insertAndGetId {
+            it[topicId] = course.topicId
+            it[title] = course.title
+            it[description] = course.description
+            it[privacy] = api.models.enum.PrivacyType.valueOf(course.privacy)
+            it[deckId] = course.deckId
+            it[thumbnailUrl] = course.thumbnailUrl
+            it[creatorId] = userId
+
+        }.value
+    }
+    suspend fun editCourse(courseId: Long, userId: Int, course: EditCourseRequest): Boolean = dbQuery {
+
+            val existingCourse = CoursesTable
+                .select { CoursesTable.id eq courseId }
+                .singleOrNull()
+                ?: throw IllegalArgumentException(("Không tìm thấy khóa học này trong hệ thống"))
+
+            val creatorIdInDb = existingCourse[CoursesTable.creatorId].value
+            if (creatorIdInDb != userId) {
+                throw IllegalArgumentException(("Bạn không có quyền chỉnh sửa khóa học của người khác"))
+            }
+
+        val updatedRows = CoursesTable.update({ CoursesTable.id eq courseId }) {
+            it[topicId] = course.topicId
+            it[title] = course.title
+            it[description] = course.description
+            it[privacy] = api.models.enum.PrivacyType.valueOf(course.privacy.uppercase().trim())
+            it[thumbnailUrl] = course.thumbnailUrl
+            it[updatedAt] = java.time.LocalDateTime.now()
+        }
+
+        updatedRows > 0
+    }
+    suspend fun deleteCourse(courseId: Long, userId: Int): Boolean = dbQuery {
+
+        val existingCourse = CoursesTable
+            .select { CoursesTable.id eq courseId }
+            .singleOrNull()
+            ?: throw IllegalArgumentException(("Không tìm thấy khóa học này trong hệ thống"))
+
+        val creatorIdInDb = existingCourse[CoursesTable.creatorId].value
+        if (creatorIdInDb != userId) {
+            throw IllegalArgumentException(("Bạn không có quyền xóa khóa học của người khác"))
+        }
+        val deletedRows = CoursesTable.deleteWhere { CoursesTable.id eq courseId }
+
+        deletedRows > 0
+    }
+
+
+    suspend fun addFavoriteCourse(userId: Int, courseId: Long): Boolean = dbQuery {
+
+        val isAlreadyFavorited = UserFavoriteCoursesTable
             .select {
-                (CoursesTable.privacy eq PrivacyType.PUBLIC) and
-                        (UserFavoriteDecksTable.userId eq userId)
+                (UserFavoriteCoursesTable.userId eq userId) and
+                        (UserFavoriteCoursesTable.courseId eq courseId)
             }
-            .map { row ->
-                val courseId = row[CoursesTable.id]
-                val isFavorite = true
-                val studyingUserCount: Int = run {
-                    val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
-                    (SpeakingParagraphResultsTable
-                        .innerJoin(SpeakingParagraphsTable)
-                        .innerJoin(SpeakingDaysTable)
-                        .slice(learnerCountExpr)
-                        .select {
-                            SpeakingDaysTable.courseId eq courseId
-                        }
-                        .firstOrNull()
-                        ?.get(learnerCountExpr) ?: 0L
-                            ).toInt()
-                }
-                val vocabNumber = row[CoursesTable.deckId]?.let { dId ->
-                    FlashcardsTable.select { FlashcardsTable.deckId eq dId }.count()
-                } ?: 0L
-                val favoriteCountExpr = (UserFavoriteCoursesTable.userId.count())
-                val favoriteUserCount = (UserFavoriteCoursesTable
-                    .slice(favoriteCountExpr)
-                    .select { UserFavoriteCoursesTable.courseId eq courseId }
-                    .firstOrNull()
-                    ?.get(favoriteCountExpr) ?: 0L).toInt()
+            .singleOrNull() != null
 
-                ShortCourseDto(
-                    id = courseId.value,
-                    thumbnail_url = row[CoursesTable.thumbnailUrl],
-                    topic = TopicDto(
-                        id = row[TopicsTable.id]?.value ?: 0,
-                        name = row[TopicsTable.name] ?: "",
-                        colorHex = row[TopicsTable.color] ?: "#636AE8"),
-                    title = row[CoursesTable.title],
-                    description = row[CoursesTable.description] ?: "",
-                    creator_name = row[UsersTable.name],
-                    creator_avatar_url = row[UsersTable.avatarUrl] ?: "",
-                    is_favorite = isFavorite,
-                    vocabNumber = vocabNumber.toInt(),
-                    studying_user_count = studyingUserCount,
-                    favorite_user_count = favoriteUserCount
-                )
+        if (!isAlreadyFavorited) {
+            UserFavoriteCoursesTable.insert {
+                it[this.userId] = userId
+                it[this.courseId] = courseId
             }
+        }
+
+        true
+    }
+
+    suspend fun removeFavoriteCourse(userId: Int, courseId: Long): Boolean = dbQuery {
+
+        val deletedRows = UserFavoriteCoursesTable.deleteWhere {
+            (UserFavoriteCoursesTable.userId eq userId) and
+                    (UserFavoriteCoursesTable.courseId eq courseId)
+        }
+
+        true
     }
 }

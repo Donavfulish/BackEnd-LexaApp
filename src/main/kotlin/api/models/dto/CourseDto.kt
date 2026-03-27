@@ -70,6 +70,15 @@ data class CreateCourseRequest(
     val topicId: Int? = null,
     val title: String,
     val description: String? = null,
-    val creatorId: Int,
-    val privacy: String
+    val privacy: String,
+    val deckId: Long?,
+    val thumbnailUrl: String?
+)
+@Serializable
+data class EditCourseRequest(
+    val topicId: Int? = null,
+    val title: String,
+    val description: String? = null,
+    val privacy: String,
+    val thumbnailUrl: String?
 )

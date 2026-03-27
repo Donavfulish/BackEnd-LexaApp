@@ -19,3 +19,12 @@ data class ShortParagraphSpeakingDayDto(
 ){
 
 }
+@Serializable
+data class CreateSpeakingDayRequest(
+    val courseId: Long,
+    val title: String?,
+)
+@Serializable
+data class EditSpeakingDayRequest(
+    val title: String?,
+)

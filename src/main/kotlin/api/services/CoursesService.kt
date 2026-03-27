@@ -2,6 +2,7 @@ package com.lexa.api.services
 
 import api.models.dto.ShortCourseDto
 import api.models.dto.CreateCourseRequest
+import api.models.dto.EditCourseRequest
 import api.models.dto.GetFeaturedCourseResponse
 import api.models.dto.GetStudyingCourseResponse
 import api.models.dto.SpeakingCourseDetailDto
@@ -33,23 +34,61 @@ class CoursesService (
         return courseRepository.getMyCourses(userId)
     }
 
-    suspend fun addCourse(request: CreateCourseRequest) : Result<Long> {
-        if (request.title.isBlank()) {
+
+    suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> {
+        return courseRepository.getFavoriteCourses(userId)
+    }
+
+
+
+    suspend fun addCourse(userId: Int, course: CreateCourseRequest) : Result<Long> {
+        if (course.title.isBlank()) {
             return Result.failure(Exception("Tên khóa học không được để trống"))
         }
-
         return try {
-            val id = courseRepository.createCourse(request);
+            val id = courseRepository.createCourse(userId, course);
             Result.success(id)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
-    suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> {
-        return courseRepository.getFavoriteCourses(userId)
+
+    suspend fun editCourse(userId: Int, courseId: Long , course: EditCourseRequest) : Result<Boolean> {
+        if (course.title.isBlank()) {
+            return Result.failure(Exception("Tên khóa học không được để trống"))
+        }
+
+        return try {
+            val result = courseRepository.editCourse(courseId, userId,course);
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    suspend fun deleteCourse(userId: Int, courseId: Long ) : Result<Boolean> {
+        return try {
+            val result = courseRepository.deleteCourse(courseId, userId);
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 
-    suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> {
-        return courseRepository.getFavoriteDecks(userId)
+    suspend fun favoriteCourse(userId: Int, courseId: Long): Result<Boolean> {
+        return try {
+            val result = courseRepository.addFavoriteCourse(userId, courseId)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun disFavoriteCourse(userId: Int, courseId: Long): Result<Boolean> {
+        return try {
+            val result = courseRepository.removeFavoriteCourse(userId, courseId)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
     }
 }

@@ -105,7 +105,7 @@ fun Route.courseRoutes(coursesService: CoursesService) {
                     }
                 )
             }
-            post ("/{courseId}/favourite"){
+            post ("/{courseId}/favorite"){
                 val userId = call.getUserId() ?: return@post call.respond(
                     HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
                 )
@@ -123,7 +123,7 @@ fun Route.courseRoutes(coursesService: CoursesService) {
                     }
                 )
             }
-            delete("/{courseId}/favourite") {
+            delete("/{courseId}/favorite") {
                 val userId = call.getUserId() ?: return@delete call.respond(
                     HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
                 )

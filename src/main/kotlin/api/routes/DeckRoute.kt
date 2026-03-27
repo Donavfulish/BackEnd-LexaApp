@@ -124,7 +124,7 @@ fun Route.deckRoutes(deckService: DeckService) {
         authenticate("auth-jwt") {
 
 
-            post("/{deckId}/favourite") {
+            post("/{deckId}/favorite") {
                 val userId = call.getUserId() ?: return@post call.respond(
                     HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
                 )
@@ -142,7 +142,7 @@ fun Route.deckRoutes(deckService: DeckService) {
                     }
                 )
             }
-            delete("/{deckId}/favourite") {
+            delete("/{deckId}/favorite") {
                 val userId = call.getUserId() ?: return@delete call.respond(
                     HttpStatusCode.Unauthorized, errorResponse("Không thể xác thực người dùng. Vui lòng đăng nhập lại.")
                 )

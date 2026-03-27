@@ -1,6 +1,7 @@
 package api.models.tables
 
 import api.models.enum.* // Lưu ý: Nếu báo đỏ, bạn check lại xem tên thư mục là 'enum' hay 'enums' nhé
+import api.utils.jsonb
 import org.jetbrains.exposed.dao.id.IntIdTable
 import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.Table
@@ -220,7 +221,7 @@ object FlashcardResultsTable : Table("flashcard_results") {
 object SpeakingParagraphResultsTable : Table("speaking_paragraph_results") {
     val userId = reference("user_id", UsersTable)
     val paragraphId = reference("paragraph_id", SpeakingParagraphsTable)
-    val wordEvaluation = text("word_evaluation").nullable()
+    val wordEvaluation = jsonb("word_evaluation").nullable()
     val goodCount = integer("good_count").nullable()
     val mediumCount = integer("medium_count").nullable()
     val badCount = integer("bad_count").nullable()

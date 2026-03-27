@@ -4,16 +4,19 @@ import api.repository.AuthRepository
 import api.repository.CoursesRepository
 import api.repository.DeckRepository
 import api.repository.FlashcardRepository
+import api.repository.ParagraphRepository
 import api.repository.SpeakingDayRepository
 import api.repository.ProfileRepository
 import api.routes.authRoutes
 import api.routes.deckRoutes
 import api.routes.flashcardRoutes
+import api.routes.paragraphRoute
 import api.routes.speakingDayRoutes
 import api.routes.profileRoutes
 import api.services.AuthService
 import api.services.DeckService
 import api.services.FlashcardService
+import api.services.ParagraphService
 import api.services.SpeakingDayService
 import api.services.ProfileService
 import com.lexa.api.routes.courseRoutes
@@ -32,7 +35,7 @@ fun Application.configureRouting() {
         flashcardRoutes(flashcardService = FlashcardService(FlashcardRepository()))
         speakingDayRoutes(speakingDaySerice = SpeakingDayService(SpeakingDayRepository()))
         profileRoutes(profileService = ProfileService(ProfileRepository()))
-
+        paragraphRoute(paragraphService = ParagraphService(ParagraphRepository()))
     }
 
 //    routing {

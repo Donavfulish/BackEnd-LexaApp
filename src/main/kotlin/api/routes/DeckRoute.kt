@@ -1,7 +1,10 @@
 package api.routes
 
+import api.config.getUserId
 import api.models.dto.CreateDeckRequest
+import api.models.dto.CreateDeckResultRequest
 import api.models.dto.UpdateDeckRequest
+import api.models.dto.UpdateDeckResultRequest
 import api.models.dto.errorResponse
 import api.models.dto.successResponse
 import api.services.DeckService
@@ -28,6 +31,56 @@ fun Route.deckRoutes(deckService: DeckService) {
                     successResponse(decks, "Lấy danh sách bộ từ vựng cá nhân thành công")
                 )
             }
+
+            post {
+                val request = call.receive<CreateDeckRequest>()
+                deckService.addDeck(request)
+                    .onSuccess { id ->
+                        call.respond(
+                            HttpStatusCode.Created,
+                            successResponse(mapOf("id" to id), "Tạo bộ từ vựng thành công")
+                        )
+                    }
+                    .onFailure { error ->
+                        call.respond(
+                            HttpStatusCode.BadRequest,
+                            errorResponse(error.message ?: "Lỗi khi tạo bộ từ vựng")
+                        )
+                    }
+            }
+
+            patch("/{deckId}"){
+                val request = call.receive<UpdateDeckRequest>()
+                val userId = call.getUserId()
+                deckService.updateDeck(userId!!, request)
+                    .onSuccess { success ->
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, successResponse(null, "Cập nhật thành công"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, errorResponse("Không tìm thấy bộ từ vựng hoặc bạn không có quyền truy cập"))
+                        }
+                    }
+                    .onFailure { error ->
+                        call.respond(HttpStatusCode.BadRequest, errorResponse(error.message ?: "Lỗi cập nhật"))
+                    }
+            }
+
+            delete("/{deckId}") {
+                val id = call.parameters["deckId"]!!.toLong()
+                val userId = call.getUserId()
+                deckService.deleteDeck(userId!!, id)
+                    .onSuccess { success ->
+                        if (success) {
+                            call.respond(HttpStatusCode.OK, successResponse(null, "Xóa thành công"))
+                        } else {
+                            call.respond(HttpStatusCode.NotFound, errorResponse("Không tìm thấy bộ từ vựng"))
+                        }
+                    }
+                    .onFailure { error ->
+                        call.respond(HttpStatusCode.InternalServerError, errorResponse(error.message ?: "Lỗi khi xóa"))
+                    }
+            }
+
             get("/result/{deckId}") {
                 val deckId = call.parameters["deckId"]!!.toLong()
                 val principal = call.principal<JWTPrincipal>()
@@ -45,59 +98,42 @@ fun Route.deckRoutes(deckService: DeckService) {
                     )
                 }
             }
-        }
 
-
-        post {
-            val request = call.receive<CreateDeckRequest>()
-
-            deckService.addDeck(request)
-                .onSuccess { id ->
+            post("/result/{deckId}") {
+                val userId = call.getUserId()
+                val request = call.receive<CreateDeckResultRequest>()
+                val result = deckService.addDeckResult(userId!!, request)
+                result.onSuccess { data ->
                     call.respond(
-                        HttpStatusCode.Created,
-                        successResponse(mapOf("id" to id), "Tạo bộ từ vựng thành công")
+                        HttpStatusCode.OK,
+                        successResponse(data, "Tạo kết quả bộ từ vựng thành công")
+                    )
+                }.onFailure { error ->
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        errorResponse(error.message ?: "Lỗi khi tạo kết quả bộ từ vựng")
                     )
                 }
-                .onFailure { error ->
+            }
+
+            patch("/result/{deckId}"){
+                val userId = call.getUserId()
+                val request = call.receive<UpdateDeckResultRequest>()
+                val result = deckService.updateDeckResult(userId!!, request)
+                result.onSuccess { data ->
                     call.respond(
-                        HttpStatusCode.BadRequest,
-                        errorResponse(error.message ?: "Lỗi khi tạo bộ từ vựng")
+                        HttpStatusCode.OK,
+                        successResponse(data, "Tạo kết quả bộ từ vựng thành công")
+                    )
+                }.onFailure { error ->
+                    call.respond(
+                        HttpStatusCode.InternalServerError,
+                        errorResponse(error.message ?: "Lỗi khi tạo kết quả bộ từ vựng")
                     )
                 }
-        }
-
-        // UPDATE Deck
-        patch("/{deckId}"){
-            val request = call.receive<UpdateDeckRequest>()
-
-            deckService.updateDeck(request)
-                .onSuccess { success ->
-                    if (success) {
-                        call.respond(HttpStatusCode.OK, successResponse(null, "Cập nhật thành công"))
-                    } else {
-                        call.respond(HttpStatusCode.NotFound, errorResponse("Không tìm thấy bộ từ vựng"))
-                    }
-                }
-                .onFailure { error ->
-                    call.respond(HttpStatusCode.BadRequest, errorResponse(error.message ?: "Lỗi cập nhật"))
-                }
-        }
-
-        // DELETE Deck
-        delete("/{deckId}") {
-            val id = call.parameters["deckId"]!!.toLong()
-
-            deckService.deleteDeck(id)
-                .onSuccess { success ->
-                    if (success) {
-                        call.respond(HttpStatusCode.OK, successResponse(null, "Xóa thành công"))
-                    } else {
-                        call.respond(HttpStatusCode.NotFound, errorResponse("Không tìm thấy bộ từ vựng"))
-                    }
-                }
-                .onFailure { error ->
-                    call.respond(HttpStatusCode.InternalServerError, errorResponse(error.message ?: "Lỗi khi xóa"))
-                }
+            }
         }
     }
+
+
 }

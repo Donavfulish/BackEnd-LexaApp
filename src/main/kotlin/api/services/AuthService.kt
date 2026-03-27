@@ -4,10 +4,12 @@ import api.config.JwtConfig
 import api.config.MailFactory
 import api.models.dto.AuthResult
 import api.models.dto.LoginRequest
+import api.models.dto.OAuthRegisterRequest
 import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
 import api.models.dto.UserInfo
 import api.models.dto.UserResponse
+import api.models.enum.ProviderType
 import api.models.tables.UsersTable
 import api.repository.AuthRepository
 import api.repository.CoursesRepository
@@ -138,5 +140,54 @@ class AuthService (
 
     suspend fun verifyOtpEmail(recipientEmail: String, otpCode: String): Boolean {
         return authRepository.verifyOTP(recipientEmail, otpCode)
+    }
+
+    suspend fun checkOAuth(sub: String, provider: ProviderType): AuthResult {
+        val user = authRepository.getUserFromOAuth(sub, provider)
+
+        if (user == null) return AuthResult(
+            ok = false,
+            message = "Tài khoản chưa được đăng ký"
+        )
+
+        val accessToken = JwtConfig.generateAccessToken(user)
+        val refreshToken = JwtConfig.generateRefreshToken(user)
+
+        authRepository.storeRefreshToken(user.id, refreshToken)
+
+        return AuthResult(
+            ok = true,
+            message = "Đăng nhập thành công bằng ${provider.toString()}",
+            id = user.id,
+            user = user.toResponse(),
+            accessToken = accessToken,
+            refreshToken = refreshToken
+        )
+    }
+
+    suspend fun signupOAuth(registerRequest: OAuthRegisterRequest, oauthSub: String): AuthResult {
+        println("sub: $oauthSub, provider: ${registerRequest.provider.toString()}")
+        val existedUser = authRepository.getUserFromOAuth(oauthSub, registerRequest.provider)
+
+        if (existedUser != null) return AuthResult(
+            ok = false,
+            message = "Tài khoản đã tồn tại"
+        )
+
+        val user = authRepository.createOAuthUser(registerRequest, oauthSub)
+
+        val accessToken = JwtConfig.generateAccessToken(user)
+        val refreshToken = JwtConfig.generateRefreshToken(user)
+
+        authRepository.storeRefreshToken(user.id, refreshToken)
+
+        return AuthResult(
+            ok = true,
+            message = "Đăng ký thành công bằng ${registerRequest.provider.toString()}",
+            id = user.id,
+            user = user.toResponse(),
+            accessToken = accessToken,
+            refreshToken = refreshToken
+        )
     }
 }

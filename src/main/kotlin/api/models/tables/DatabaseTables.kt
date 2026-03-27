@@ -32,8 +32,8 @@ inline fun <reified T : Enum<T>> org.jetbrains.exposed.sql.Table.pgEnum(
 
 object UsersTable : IntIdTable("users") {
     val name = varchar("name", 255)
-    val email = varchar("email", 255).uniqueIndex()
-    val passwordHash = text("password_hash")
+    val email = varchar("email", 255).nullable().uniqueIndex()
+    val passwordHash = text("password_hash").nullable()
     val emailVerified = bool("email_verified").default(false)
     val address = text("address").nullable()
     val dateOfBirth = date("date_of_birth").nullable()

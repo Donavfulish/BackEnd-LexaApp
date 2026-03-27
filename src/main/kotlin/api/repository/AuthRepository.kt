@@ -1,8 +1,11 @@
 package api.repository
 
+import api.models.dto.OAuthRegisterRequest
 import api.models.dto.SignupRequest
 import api.models.dto.UserInfo
 import api.models.enum.OtpPurpose
+import api.models.enum.ProviderType
+import api.models.tables.AuthProviderTable
 import api.models.tables.RefreshTokensTable
 import api.models.tables.UserOtpsTable
 import api.models.tables.UsersTable
@@ -17,7 +20,9 @@ import kotlin.time.Clock
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
+import org.jetbrains.exposed.sql.innerJoin
 import org.jetbrains.exposed.sql.selectAll
+import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDate
 
@@ -130,5 +135,54 @@ class AuthRepository {
         }
 
         updateCount > 0
+    }
+
+    suspend fun createOAuthUser(request: OAuthRegisterRequest, oauthSub: String): UserInfo = dbQuery {
+        transaction {
+            val result = UsersTable.insert {
+                it[name] = request.name
+                it[email] = request.email
+                it[emailVerified] = true
+                it[address] = request.address
+                it[role] = request.role
+                it[languageCertificate] = request.english_certificate_url
+                it[teachingDegree] = request.pedagogical_certificate_url
+            }
+
+            val userId = result[UsersTable.id]
+
+            AuthProviderTable.insert {
+                it[AuthProviderTable.userId] = userId
+                it[AuthProviderTable.provider] = request.provider
+                it[AuthProviderTable.providerUserId] = oauthSub
+            }
+
+            val row = result.resultedValues!!.first()
+
+            UserInfo(
+                id = row[UsersTable.id].value,
+                email = row[UsersTable.email],
+                name = row[UsersTable.name],
+                role = row[UsersTable.role],
+            )
+        }
+    }
+
+    suspend fun getUserFromOAuth(sub: String, provider: ProviderType): UserInfo? = dbQuery {
+        AuthProviderTable
+            .innerJoin(UsersTable)
+            .select {
+                (AuthProviderTable.provider eq provider) and
+                        (AuthProviderTable.providerUserId eq sub)
+            }
+            .map { row ->
+                UserInfo(
+                    id = row[UsersTable.id].value,
+                    email = row[UsersTable.email],
+                    name = row[UsersTable.name],
+                    role = row[UsersTable.role],
+                )
+            }
+            .singleOrNull()
     }
 }

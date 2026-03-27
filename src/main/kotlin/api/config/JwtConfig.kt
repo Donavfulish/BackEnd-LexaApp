@@ -1,6 +1,7 @@
 package api.config
 
 import api.models.dto.GoogleUserInfo
+import api.models.dto.OAuthUserInfo
 import api.models.dto.UserInfo
 import com.auth0.jwt.JWT
 import com.auth0.jwt.JWTVerifier
@@ -32,11 +33,12 @@ object JwtConfig {
         .withExpiresAt(Date(System.currentTimeMillis() + validityInMs))
         .sign(algorithm)
 
-    fun generateGoogleAccessToken(googleUserInfo: GoogleUserInfo): String = JWT.create()
-        .withSubject(googleUserInfo.toString())
+    fun generateGoogleAccessToken(oauthUser: OAuthUserInfo): String = JWT.create()
+        .withSubject(oauthUser.toString())
         .withIssuer(dotenv["JWT_ISSUER"])
-        .withClaim("id", googleUserInfo.sub)
-        .withClaim("type", "google-access")
+        .withClaim("provider", oauthUser.provider.toString())
+        .withClaim("sub", oauthUser.sub)
+        .withClaim("type", "oauth-access")
         .withExpiresAt(Date(System.currentTimeMillis() + validityInMs))
         .sign(algorithm)
 
@@ -57,4 +59,15 @@ fun ApplicationCall.getUserId(): Int? {
 fun ApplicationCall.getUserRole(): String? {
     val principal = this.principal<JWTPrincipal>()
     return principal?.payload?.getClaim("role")?.asString()
+}
+
+
+fun ApplicationCall.getOAuthProviderString(): String? {
+    val principal = this.principal<JWTPrincipal>()
+    return principal?.payload?.getClaim("provider")?.asString()
+}
+
+fun ApplicationCall.getOAuthSub(): String? {
+    val principal = this.principal<JWTPrincipal>()
+    return principal?.payload?.getClaim("sub")?.asString()
 }

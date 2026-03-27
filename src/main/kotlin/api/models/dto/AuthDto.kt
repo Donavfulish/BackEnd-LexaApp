@@ -1,9 +1,11 @@
 package api.models.dto
 
+import api.models.enum.ProviderType
 import api.models.enum.UserRole
 import io.ktor.network.sockets.SocketAddress
 import kotlinx.serialization.Serializable
 import org.jetbrains.exposed.dao.id.EntityID
+import java.security.Provider
 
 @Serializable
 data class LoginRequest(
@@ -14,6 +16,15 @@ data class LoginRequest(
 @Serializable
 data class GoogleUserInfo(
     val sub: String? = null,          // google_id (duy nhất, không đổi)
+    val name: String,
+    val email: String,
+    val picture: String? = null
+)
+
+@Serializable
+data class OAuthUserInfo(
+    val provider: ProviderType,
+    val sub: String? = null,
     val name: String,
     val email: String,
     val picture: String? = null
@@ -49,7 +60,7 @@ data class AuthResult (
 @Serializable
 data class UserInfo (
     val id: Int,
-    val email: String,
+    val email: String?,
     val name: String,
     val role: UserRole,
     val passwordHash: String? = ""
@@ -58,7 +69,7 @@ data class UserInfo (
 @Serializable
 data class UserResponse(
     val id: Int,
-    val email: String,
+    val email: String? = null,
     val name: String,
     val role: UserRole
 )
@@ -72,4 +83,15 @@ data class OtpRequest (
 data class OtpVerify (
     val email: String,
     val otp: String,
+)
+
+@Serializable
+data class OAuthRegisterRequest (
+    val provider: ProviderType,
+    val name: String,
+    val email: String? = null,
+    val address: String,
+    val role: UserRole,
+    val english_certificate_url: String? = null,
+    val pedagogical_certificate_url: String? = null
 )

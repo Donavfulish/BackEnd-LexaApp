@@ -60,6 +60,28 @@ fun Application.configureSecurity(httpClient: HttpClient) {
                 )
             }
         }
+        jwt("auth-jwt-oauth") { // Đây chính là "middleware"
+            verifier(JwtConfig.verifier)
+            validate { credential ->
+                // TEST ==================
+                val authHeader = request.parseAuthorizationHeader()
+                println("SERVER_LOG: Raw Header -> $authHeader")
+                // =======================
+
+                val type = credential.payload.getClaim("type").asString()
+                if (credential.payload.subject != null && type == "oauth-access") {
+                    JWTPrincipal(credential.payload)
+                } else {
+                    null
+                }
+            }
+            challenge { _, _ ->
+                call.respondText(
+                    text = "Token expired or invalid",
+                    status = HttpStatusCode.Unauthorized
+                )
+            }
+        }
         oauth("oauth-google") {
             // Cấu hình URL callback (phải khớp với Google Console)
             urlProvider = { "http://localhost:8081/api/auth/oauth/google-callback" }
@@ -76,6 +98,7 @@ fun Application.configureSecurity(httpClient: HttpClient) {
                         "https://www.googleapis.com/auth/userinfo.profile",
                         "https://www.googleapis.com/auth/userinfo.email" // THÊM DÒNG NÀY
                     ),
+
                     extraAuthParameters = listOf("access_type" to "offline"),
                     onStateCreated = { call, state ->
                         val target = call.request.queryParameters["redirectUrl"] ?: "lexa://auth-success"

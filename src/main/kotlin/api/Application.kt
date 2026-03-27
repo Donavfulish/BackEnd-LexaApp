@@ -12,7 +12,7 @@ import com.lexa.api.plugins.configureMonitoring
 import io.ktor.client.HttpClient
 
 
-// Mở cmd chạy lệnh dưới trước khi chạy Frontend + Backend
+// Mở cmd chạy lệnh dưới sau khi chạy Frontend + Backend
 // adb reverse tcp:8081 tcp:8081
 
 fun main(args: Array<String>) {

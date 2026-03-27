@@ -1,17 +1,21 @@
 package api.routes
 
 import api.config.JwtConfig
+import api.config.getOAuthSub
 import api.config.getUserId
 import api.config.getUserRole
 import api.models.dto.CreateCourseRequest
 import api.models.dto.ErrorResponse
 import api.models.dto.GoogleUserInfo
 import api.models.dto.LoginRequest
+import api.models.dto.OAuthRegisterRequest
+import api.models.dto.OAuthUserInfo
 import api.models.dto.OtpRequest
 import api.models.dto.OtpVerify
 import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
 import api.models.dto.successResponse
+import api.models.enum.ProviderType
 import api.services.AuthService
 import com.lexa.api.plugins.applicationHttpClient
 import com.lexa.api.plugins.redirects
@@ -100,7 +104,9 @@ fun Route.authRoutes(authService: AuthService) {
             val result = authService.refreshAccessToken(refreshToken)
 
             if (result.ok) {
-                call.respond(HttpStatusCode.OK, result)
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(result, result.message?: "Thành công"))
             } else {
                 // Trả về 401 để Frontend biết đường đá người dùng ra màn Login
                 call.respond(HttpStatusCode.Unauthorized, result)
@@ -117,7 +123,7 @@ fun Route.authRoutes(authService: AuthService) {
     }
 
     authenticate("oauth-google") {
-        get("/api/auth/login/google") {
+        get("/api/auth/google/login") {
             // Ktor sẽ tự động redirect sang Google sau khi block này chạy xong
         }
 
@@ -141,9 +147,19 @@ fun Route.authRoutes(authService: AuthService) {
             val jsonString = response.bodyAsText()
             println("Google Response JSON: $jsonString") // Xem nó có email/name thật không
 
-            val userInfo = response.body<GoogleUserInfo>()
+            val googleUserInfo = response.body<GoogleUserInfo>()
 
-            val googleAccessToken = JwtConfig.generateGoogleAccessToken(userInfo)
+            val oauthUserInfo = OAuthUserInfo(
+                provider = ProviderType.GOOGLE,
+                sub = googleUserInfo.sub,
+                name = googleUserInfo.name,
+                email = googleUserInfo.email,
+                picture = googleUserInfo.picture
+            )
+
+            val googleAccessToken = JwtConfig.generateGoogleAccessToken(oauthUserInfo)
+
+            println("Google Access Token: $googleAccessToken")
 
             val state = principal!!.state ?: ""
             val baseRedirect = redirects.remove(state) ?: "lexa://auth-success"
@@ -151,22 +167,55 @@ fun Route.authRoutes(authService: AuthService) {
             // Lưu ý: encode URL các thành phần như name hoặc email để tránh lỗi ký tự đặc biệt
             val finalUrl = URLBuilder(baseRedirect).apply {
                 parameters.append("token", googleAccessToken)
-                parameters.append("email", userInfo.email)
-                parameters.append("name", userInfo.name)
-                userInfo.picture?.let { parameters.append("avatar", it) }
+                parameters.append("email", oauthUserInfo.email)
+                parameters.append("name", oauthUserInfo.name)
+                oauthUserInfo.picture?.let { parameters.append("avatar", it) }
             }.buildString()
 
             call.respondRedirect(finalUrl)
         }
     }
 
+
     route("/api/auth/google") {
-        get("/check") {
-            // TODO Trả về accessToken + refreshToken nếu tk google này đã tồn tại
-            // TODO Nếu tk chưa tồn tại, thì trả về name + ngày sinh... detect được
-        }
-        get("/signup") {
-            // TODO Xử lý đăng ký, trả về accessToken + refreshToken
+        authenticate("auth-jwt-oauth") {
+            get("/check") {
+                val googleSub = call.getOAuthSub()
+
+                if (googleSub == null) { call.respond(HttpStatusCode.Unauthorized, mapOf("sub" to googleSub)) }
+
+                val result = authService.checkOAuth(googleSub!!, ProviderType.GOOGLE)
+
+                if (result.ok) {
+                    call.respond(HttpStatusCode.OK, successResponse(result, result.message ?: "Thành công"))
+                } else {
+                    // Trả về 401 để Frontend biết đường đá người dùng ra màn Login
+                    call.respond(
+                        HttpStatusCode.Unauthorized, successResponse(result, result.message?: "Thất bại")
+                    )
+                }
+            }
+            post("/signup") {
+                val googleSub = call.getOAuthSub()
+
+                if (googleSub == null) { call.respond(HttpStatusCode.Unauthorized, mapOf("sub" to googleSub)) }
+
+                val registerRequest = call.receive<OAuthRegisterRequest>()
+
+                val result = authService.signupOAuth(registerRequest, googleSub!!)
+
+                if (result.ok) {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        successResponse(result,result.message?: "Thành công")
+                    )
+                } else {
+                    // Trả về 401 để Frontend biết đường đá người dùng ra màn Login
+                    call.respond(
+                        HttpStatusCode.Unauthorized, successResponse(result, result.message?: "Thất bại")
+                    )
+                }
+            }
         }
     }
 

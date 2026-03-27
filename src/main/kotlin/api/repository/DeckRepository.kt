@@ -1,14 +1,19 @@
 package api.repository
 
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
 import api.models.dto.CreateDeckRequest
+import api.models.dto.CreateDeckResultRequest
 import api.models.dto.DeckDto
 import api.models.dto.DeckResult
 import api.models.dto.TopicDto
 import api.models.dto.UpdateDeckRequest
+import api.models.dto.UpdateDeckResultRequest
 import api.models.tables.DeckResultsTable
 import api.models.tables.FlashcardDecksTable
+import api.models.tables.FlashcardResultsTable
 import api.models.tables.FlashcardsTable
 import api.models.tables.TopicsTable
+import api.models.tables.UserFavoriteDecksTable
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -21,12 +26,13 @@ class DeckRepository {
         FlashcardDecksTable.insertAndGetId {
             it[title] = request.title
             it[creatorId] = request.creatorId
-            it[privacy] = api.models.enum.PrivacyType.PRIVATE
+            it[privacy] = api.models.enum.PrivacyType.PUBLIC
         }.value
     }
 
-    suspend fun updateDeck(request: UpdateDeckRequest): Boolean = dbQuery {
-        FlashcardDecksTable.update({ FlashcardDecksTable.id eq request.deckId }) {
+    suspend fun updateDeck(userId: Int, request: UpdateDeckRequest): Boolean = dbQuery {
+        FlashcardDecksTable.update({
+            (FlashcardDecksTable.id eq request.deckId) and (FlashcardDecksTable.creatorId eq userId)}) {
             request.title?.let { t -> it[title] = t }
             request.privacy?.let { p ->
                 it[privacy] = api.models.enum.PrivacyType.valueOf(p.uppercase()) 
@@ -35,8 +41,39 @@ class DeckRepository {
         } > 0
     }
 
-    suspend fun deleteDeck(deckId: Long): Boolean = dbQuery {
-        FlashcardDecksTable.deleteWhere { FlashcardDecksTable.id eq deckId } > 0
+    suspend fun deleteDeck(userId: Int, deckId: Long): Boolean = dbQuery {
+        val checkOwner = FlashcardDecksTable.select { (FlashcardDecksTable.id eq deckId) and (FlashcardDecksTable.creatorId eq userId) }
+            .any()
+        if(checkOwner) {
+            FlashcardResultsTable.deleteWhere {
+                FlashcardResultsTable.flashcardId inSubQuery FlashcardsTable
+                    .slice(FlashcardsTable.id)
+                    .select { FlashcardsTable.deckId eq deckId }
+            }
+            FlashcardsTable.deleteWhere { FlashcardsTable.deckId eq deckId }
+            DeckResultsTable.deleteWhere { DeckResultsTable.deckId eq deckId }
+            UserFavoriteDecksTable.deleteWhere { UserFavoriteDecksTable.deckId eq deckId }
+            FlashcardDecksTable.deleteWhere { FlashcardDecksTable.id eq deckId } > 0
+        } else {
+            false
+        }
+    }
+
+    suspend fun createDeckResult(request: CreateDeckResultRequest): Boolean = dbQuery {
+        DeckResultsTable.insert{
+            it[userId] = request.userId
+            it[deckId] = request.deckId
+            it[rememberedCount] = request.rememberedCount
+            it[forgottenCount] = request.forgottenCount
+        }.insertedCount > 0
+    }
+
+    suspend fun updateDeckResult(request: UpdateDeckResultRequest): Boolean = dbQuery {
+        DeckResultsTable.update({
+            (DeckResultsTable.deckId eq request.deckId) and (DeckResultsTable.userId eq request.userId)}){
+            it[rememberedCount] = request.rememberedCount
+            it[forgottenCount] = request.forgottenCount
+        } > 0
     }
 
     suspend fun getDeckResult(userId: Int, deckId: Long): DeckResult? = dbQuery {

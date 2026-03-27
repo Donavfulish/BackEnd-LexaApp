@@ -26,7 +26,7 @@ data class CreateDeckRequest(
 data class UpdateDeckRequest(
     val deckId: Long,
     val title: String,
-    val privacy: String? = null
+    val privacy: String?
 )
 
 @Serializable
@@ -38,7 +38,15 @@ data class DeckResult(
 )
 
 @Serializable
-data class InsertDeckResultRequest(
+data class CreateDeckResultRequest(
+    val deckId: Long,
+    val userId: Int,
+    val rememberedCount: Int,
+    val forgottenCount: Int
+)
+
+@Serializable
+data class UpdateDeckResultRequest(
     val deckId: Long,
     val userId: Int,
     val rememberedCount: Int,

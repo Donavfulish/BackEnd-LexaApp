@@ -1,17 +1,16 @@
 package api.services
 
 import api.models.dto.CreateDeckRequest
+import api.models.dto.CreateDeckResultRequest
 import api.models.dto.DeckDto
 import api.models.dto.DeckResult
 import api.models.dto.UpdateDeckRequest
+import api.models.dto.UpdateDeckResultRequest
 import api.repository.DeckRepository
 
 class DeckService(
     private val deckRepository: DeckRepository
 ) {
-    suspend fun getAllDecks(): List<DeckDto>{
-        return deckRepository.getAllDecks(null);
-    }
 
     suspend fun getMyDecks(userId: Int): List<DeckDto>{
         return deckRepository.getAllDecks(userId);
@@ -26,6 +25,30 @@ class DeckService(
         }
     }
 
+    suspend fun addDeckResult(userId: Int, request: CreateDeckResultRequest): Result<Boolean>{
+        return try {
+            if(userId != request.userId){
+                return Result.failure(Exception("Không phải chủ bộ từ vựng"))            }
+            val bool = deckRepository.createDeckResult(request)
+            Result.success(bool)
+        } catch (e: Exception){
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateDeckResult(userId: Int, request: UpdateDeckResultRequest): Result<Boolean>{
+        return try {
+            if(userId != request.userId){
+                return Result.failure(Exception("Không phải chủ bộ từ vựng"))            }
+            val bool = deckRepository.updateDeckResult(request)
+            Result.success(bool)
+        } catch (e: Exception){
+            Result.failure(e)
+        }
+    }
+
+
+
     suspend fun addDeck(request: CreateDeckRequest) : Result<Long>{
         if (request.title.isBlank()) {
             return Result.failure(Exception("Tên bộ từ vựng không được để trống"))
@@ -39,21 +62,21 @@ class DeckService(
         }
     }
 
-    suspend fun updateDeck(request: UpdateDeckRequest) : Result<Boolean>{
-        if (request.title.isBlank()) {
+    suspend fun updateDeck(userId: Int, request: UpdateDeckRequest) : Result<Boolean>{
+        if (request.title.isNullOrEmpty()) {
             return Result.failure(Exception("Tên bộ từ vựng không được để trống"))
         }
         return try {
-            val id = deckRepository.updateDeck(request);
+            val id = deckRepository.updateDeck(userId, request);
             Result.success(id)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun deleteDeck(deckId: Long) : Result<Boolean>{
+    suspend fun deleteDeck(userId: Int, deckId: Long) : Result<Boolean>{
         return try {
-            val id = deckRepository.deleteDeck(deckId);
+            val id = deckRepository.deleteDeck(userId, deckId);
             Result.success(id)
         } catch (e: Exception) {
             Result.failure(e)

@@ -11,7 +11,7 @@ class ParagraphService(
     private val paragraphRepository: ParagraphRepository
 ) {
 
-    suspend fun createParagraph(request: CreateParagraphRequest, userRole: String): Result<ParagraphResponseDto> {
+    suspend fun createParagraph(request: CreateParagraphRequest, userRole: String?): Result<ParagraphResponseDto> {
         // 1. Validate Role
         if (userRole != "teacher") {
             return Result.failure(Exception("FORBIDDEN_ROLE"))
@@ -39,7 +39,7 @@ class ParagraphService(
     suspend fun updateParagraphInfo(
         paragraphId: Long,
         request: UpdateParagraphRequest,
-        userRole: String
+        userRole: String?
     ): Result<ParagraphResponseDto> {
         if (userRole != "teacher") {
             return Result.failure(Exception("FORBIDDEN_ROLE"))
@@ -63,7 +63,7 @@ class ParagraphService(
 
     suspend fun deleteParagraph(
         paragraphId: Long,
-        userRole: String
+        userRole: String?
     ): Result<Unit> {
         if (userRole != "teacher") {
             return Result.failure(Exception("FORBIDDEN_ROLE"))

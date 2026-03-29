@@ -1,167 +1,96 @@
 package api.routes
 
-import api.models.dto.CreateParagraphRequest
-import api.models.dto.UpdateParagraphRequest
-import api.models.dto.UpdateParagraphResultRequest
-import api.models.dto.errorResponse
-import api.models.dto.successResponse
+import api.config.getUserRole
+import api.models.dto.*
+import api.models.enum.UserRole
 import api.services.ParagraphService
+import api.utils.getLongParamOrRespond
+import api.utils.getUserIdOrRespond
+import api.utils.handleResult
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.application.*
-import io.ktor.server.auth.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
 import io.ktor.server.routing.*
 
-fun Route.paragraphRoute(paragraphService: ParagraphService) {
+fun Route.paragraphRoute(service: ParagraphService) {
 
-    route("/api/paragraph") {
-        // Mở comment authenticate khi bạn đã setup auth-jwt
-        // authenticate("auth-jwt") {
+    // ===== TEACHER ONLY =====
+    secureRoute("/api/paragraph", listOf(UserRole.TEACHER)) {
+
+        // ===== CREATE =====
         post {
-            try {
-                // TODO: Lấy role thực tế từ Token thay vì hardcode
-                // val userRole = call.getUserRole()
-                val userRole = "teacher"
+            val role = call.getUserRole()
+            val request = call.receive<CreateParagraphRequest>()
 
-                // Parsing body từ JSON sang DTO
-                val request = call.receive<CreateParagraphRequest>()
-
-                // Gọi service
-                val result = paragraphService.createParagraph(request, userRole)
-
-                result.fold(
-                    onSuccess = { data ->
-                        call.respond(
-                            HttpStatusCode.OK,
-                            successResponse(data, "Create paragraph successfully")
-                        )
-                    },
-                    onFailure = { exception ->
-                        when (exception.message) {
-                            "FORBIDDEN_ROLE" -> call.respond(
-                                HttpStatusCode.Forbidden,
-                                errorResponse("Quyền truy cập bị từ chối: Chỉ giáo viên mới có thể tạo paragraph.")
-                            )
-                            else -> call.respond(
-                                HttpStatusCode.BadRequest,
-                                errorResponse(exception.message ?: "Có lỗi xảy ra khi tạo paragraph")
-                            )
-                        }
+            service.createParagraph(request, role).handleResult(
+                onSuccess = {
+                    call.respond(HttpStatusCode.OK, successResponse(it, "Create paragraph successfully"))
+                },
+                onError = {
+                    if (it == "FORBIDDEN_ROLE") {
+                        call.respond(HttpStatusCode.Forbidden, errorResponse("Chỉ teacher mới được tạo"))
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, errorResponse(it))
                     }
-                )
-            } catch (e: ContentTransformationException) {
-                call.respond(
-                    HttpStatusCode.BadRequest,
-                    errorResponse("Dữ liệu đầu vào sai định dạng")
-                )
-            } catch (e: Exception) {
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    errorResponse("Lỗi hệ thống: ${e.localizedMessage}")
-                )
-            }
+                }
+            )
         }
 
+        // ===== UPDATE INFO =====
         patch("/{paragraphId}/info") {
-            try {
-                val userRole = "teacher" // TODO: Lấy từ Auth Token
+            val role = call.getUserRole()
+            val paragraphId = call.getLongParamOrRespond("paragraphId") ?: return@patch
+            val request = call.receive<UpdateParagraphRequest>()
 
-                val idString = call.parameters["paragraphId"]
-                if (idString == null) {
-                    call.respond(HttpStatusCode.BadRequest, errorResponse("Thiếu paragraphId"))
-                    return@patch
-                }
-                val paragraphId = idString.toLong()
-
-                val request = call.receive<UpdateParagraphRequest>()
-                val result = paragraphService.updateParagraphInfo(paragraphId, request, userRole)
-
-                result.fold(
-                    onSuccess = { data ->
-                        call.respond(
-                            HttpStatusCode.OK,
-                            // Ghi chú: Đổi message để phù hợp ngữ cảnh Update
-                            successResponse(data, "Update paragraph info successfully")
-                        )
-                    },
-                    onFailure = { exception ->
-                        if (exception.message == "FORBIDDEN_ROLE") {
-                            call.respond(HttpStatusCode.Forbidden, errorResponse("Chỉ giáo viên mới có quyền cập nhật."))
-                        } else {
-                            call.respond(HttpStatusCode.BadRequest, errorResponse(exception.message ?: "Lỗi cập nhật"))
-                        }
+            service.updateParagraphInfo(paragraphId, request, role).handleResult(
+                onSuccess = {
+                    call.respond(HttpStatusCode.OK, successResponse(it, "Update paragraph successfully"))
+                },
+                onError = {
+                    if (it == "FORBIDDEN_ROLE") {
+                        call.respond(HttpStatusCode.Forbidden, errorResponse("Chỉ teacher mới được cập nhật"))
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, errorResponse(it))
                     }
-                )
-            } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống: ${e.localizedMessage}"))
-            }
+                }
+            )
         }
 
+        // ===== DELETE =====
         delete("/{paragraphId}") {
-            try {
-                val userRole = "teacher" // TODO: Lấy từ Auth Token
+            val role = call.getUserRole()
+            val paragraphId = call.getLongParamOrRespond("paragraphId") ?: return@delete
 
-                val idString = call.parameters["paragraphId"]
-                if (idString == null) {
-                    call.respond(HttpStatusCode.BadRequest, errorResponse("Thiếu paragraphId"))
-                    return@delete
+            service.deleteParagraph(paragraphId, role).handleResult(
+                onSuccess = {
+                    call.respond(HttpStatusCode.OK, successResponse(null, "Delete paragraph successfully"))
+                },
+                onError = {
+                    if (it == "FORBIDDEN_ROLE") {
+                        call.respond(HttpStatusCode.Forbidden, errorResponse("Chỉ teacher mới được xóa"))
+                    } else {
+                        call.respond(HttpStatusCode.BadRequest, errorResponse(it))
+                    }
                 }
-                val paragraphId = idString.toLong()
-
-                val result = paragraphService.deleteParagraph(paragraphId, userRole)
-
-                result.fold(
-                    onSuccess = {
-                        call.respond(
-                            HttpStatusCode.OK,
-                            successResponse(null, "Delete paragraph successfully")
-                        )
-                    },
-                    onFailure = { exception ->
-                        if (exception.message == "FORBIDDEN_ROLE") {
-                            call.respond(HttpStatusCode.Forbidden, errorResponse("Chỉ giáo viên mới có quyền xóa."))
-                        } else {
-                            call.respond(HttpStatusCode.BadRequest, errorResponse(exception.message ?: "Lỗi khi xóa"))
-                        }
-                    }
-                )
-            } catch (e: Exception) {
-                call.respond(HttpStatusCode.InternalServerError, errorResponse("Lỗi hệ thống: ${e.localizedMessage}"))
-            }
+            )
         }
+    }
 
-        // 5. Thay đổi thông tin kết quả paragraph (student)
-        patch("/result") {
-            try {
-                // TODO: Lấy userId thực tế từ Auth Token
-                // val userId = call.getUserId()
-                val userId = 11
+    // ===== STUDENT / USER =====
+    secureRoute("/api/paragraph/result") {
 
-                val request = call.receive<UpdateParagraphResultRequest>()
-                val result = paragraphService.updateParagraphResult(userId, request)
+        patch {
+            val userId = call.getUserIdOrRespond() ?: return@patch
+            val request = call.receive<UpdateParagraphResultRequest>()
 
-                result.fold(
-                    onSuccess = { data ->
-                        call.respond(
-                            HttpStatusCode.OK,
-                            // Mình đổi thông báo "Get paragraph count successfully" thành thông báo Update
-                            successResponse(data, "Update paragraph result successfully")
-                        )
-                    },
-                    onFailure = { exception ->
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            errorResponse(exception.message ?: "Lỗi khi cập nhật kết quả đoạn văn")
-                        )
-                    }
-                )
-            } catch (e: Exception) {
-                call.respond(
-                    HttpStatusCode.InternalServerError,
-                    errorResponse("Lỗi hệ thống: ${e.localizedMessage}")
-                )
-            }
+            service.updateParagraphResult(userId, request).handleResult(
+                onSuccess = {
+                    call.respond(HttpStatusCode.OK, successResponse(it, "Update result successfully"))
+                },
+                onError = {
+                    call.respond(HttpStatusCode.BadRequest, errorResponse(it))
+                }
+            )
         }
     }
 }

@@ -1,97 +1,81 @@
 package api.routes
 
-import api.config.getUserId
-import api.models.dto.CreateFlashcardRequest
-import api.models.dto.UpdateFlashcardRequest
-import api.models.dto.errorResponse
-import api.models.dto.successResponse
+import api.models.dto.*
 import api.services.FlashcardService
+import api.utils.getLongParamOrRespond
+import api.utils.getUserIdOrRespond
+import api.utils.handleResult
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.auth.authenticate
+import io.ktor.server.request.receive
+import io.ktor.server.response.respond
 import io.ktor.server.routing.*
-import io.ktor.server.request.*
-import io.ktor.server.response.*
 
-fun Route.flashcardRoutes(flashcardService: FlashcardService){
-    route("api/decks/{deckId}/flashcards") {
-        authenticate("auth-jwt") {
-            get {
-                val deckId = call.parameters["deckId"]!!.toLong()
-                val flashcards = flashcardService.getAllFlashcard(deckId)
-                call.respond(
-                    HttpStatusCode.OK,
-                    successResponse(flashcards, "Lấy danh sách Flashcard thành công")
-                )
-            }
+fun Route.flashcardRoutes(service: FlashcardService) {
 
-            post {
-                val userId = call.getUserId()
-                val request = call.receive<CreateFlashcardRequest>()
-                flashcardService.addFlashcard(userId!!, request)
-                    .onSuccess { id ->
-                        call.respond(
-                            HttpStatusCode.Created,
-                            successResponse(mapOf("id" to id), "Thêm Flashcard thành công")
-                        )
-                    }
-                    .onFailure { error ->
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            errorResponse(error.message ?: "Lỗi khi thêm Flashcard")
-                        )
-                    }
-            }
+    secureRoute("/api/decks/{deckId}/flashcards") {
 
-            patch {
-                val userId = call.getUserId()
-                val request = call.receive<UpdateFlashcardRequest>()
-                flashcardService.updateFlashcard(userId!!, request)
-                    .onSuccess { success ->
-                        if (success) {
-                            call.respond(
-                                HttpStatusCode.OK,
-                                successResponse(null, "Cập nhật Flashcard thành công")
-                            )
-                        } else {
-                            call.respond(
-                                HttpStatusCode.NotFound,
-                                errorResponse("Không tìm thấy Flashcard để cập nhật")
-                            )
-                        }
-                    }
-                    .onFailure { error ->
-                        call.respond(
-                            HttpStatusCode.BadRequest,
-                            errorResponse(error.message ?: "Lỗi khi cập nhật")
-                        )
-                    }
-            }
+        // ===== GET ALL =====
+        get {
+            val deckId = call.getLongParamOrRespond("deckId") ?: return@get
 
-            delete("/{id}") {
-                val userId = call.getUserId()
-                val id = call.parameters["id"]!!.toLong()
+            val data = service.getAllFlashcard(deckId)
+            call.respond(HttpStatusCode.OK, successResponse(data, "Lấy danh sách flashcard"))
+        }
 
-                flashcardService.deleteFlashcard(userId!!, id)
-                    .onSuccess { success ->
-                        if (success) {
-                            call.respond(
-                                HttpStatusCode.OK,
-                                successResponse(null, "Xóa Flashcard thành công")
-                            )
-                        } else {
-                            call.respond(
-                                HttpStatusCode.NotFound,
-                                errorResponse("Không tìm thấy Flashcard để xóa")
-                            )
-                        }
-                    }
-                    .onFailure { error ->
-                        call.respond(
-                            HttpStatusCode.InternalServerError,
-                            errorResponse(error.message ?: "Lỗi khi xóa")
-                        )
-                    }
-            }
+        // ===== CREATE =====
+        post {
+            val userId = call.getUserIdOrRespond() ?: return@post
+            val request = call.receive<CreateFlashcardRequest>()
+
+            service.addFlashcard(userId, request).handleResult(
+                onSuccess = {
+                    call.respond(
+                        HttpStatusCode.Created,
+                        successResponse(mapOf("id" to it), "Thêm flashcard thành công")
+                    )
+                },
+                onError = {
+                    call.respond(HttpStatusCode.BadRequest, errorResponse(it))
+                }
+            )
+        }
+
+        // ===== UPDATE =====
+        patch {
+            val userId = call.getUserIdOrRespond() ?: return@patch
+            val request = call.receive<UpdateFlashcardRequest>()
+
+            service.updateFlashcard(userId, request).handleResult(
+                onSuccess = { success ->
+                    call.respond(
+                        if (success) HttpStatusCode.OK else HttpStatusCode.NotFound,
+                        if (success) successResponse(null, "Cập nhật flashcard thành công")
+                        else errorResponse("Không tìm thấy flashcard")
+                    )
+                },
+                onError = {
+                    call.respond(HttpStatusCode.BadRequest, errorResponse(it))
+                }
+            )
+        }
+
+        // ===== DELETE =====
+        delete("/{id}") {
+            val userId = call.getUserIdOrRespond() ?: return@delete
+            val id = call.getLongParamOrRespond("id") ?: return@delete
+
+            service.deleteFlashcard(userId, id).handleResult(
+                onSuccess = { success ->
+                    call.respond(
+                        if (success) HttpStatusCode.OK else HttpStatusCode.NotFound,
+                        if (success) successResponse(null, "Xóa flashcard thành công")
+                        else errorResponse("Không tìm thấy flashcard")
+                    )
+                },
+                onError = {
+                    call.respond(HttpStatusCode.InternalServerError, errorResponse(it))
+                }
+            )
         }
     }
 }

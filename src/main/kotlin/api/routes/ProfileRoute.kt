@@ -1,57 +1,39 @@
 package api.routes
 
-
-import api.config.getUserId
-import api.models.dto.UpdateProfileRequest
-import api.models.dto.errorResponse
-import api.models.dto.successResponse
+import api.models.dto.*
 import api.services.ProfileService
+import api.utils.getUserIdOrRespond
 import io.ktor.http.HttpStatusCode
-import io.ktor.server.auth.authenticate
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
 
-fun Route.profileRoutes(profileService: ProfileService) {
-    authenticate("auth-jwt") {
-        route("/api/profile") {
-            patch("/update") {
-                val id = call.getUserId()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, errorResponse("Thiếu id"))
-                    return@patch
-                }
+fun Route.profileRoutes(service: ProfileService) {
 
-                val updatedData = call.receive<UpdateProfileRequest>()
+    secureRoute("/api/profile") {
 
-                val isSuccess = profileService.updateProfile(id, updatedData)
+        // ===== GET MY PROFILE =====
+        get {
+            val userId = call.getUserIdOrRespond() ?: return@get
 
-                if (isSuccess) {
-                    call.respond(
-                        HttpStatusCode.OK,
-                        successResponse(null, "Cập nhật thông tin cá nhân thành công")
-                    )
-                } else {
-                    call.respond(
-                        HttpStatusCode.BadRequest,
-                        successResponse(null, "Cập nhật thông tin cá nhân thất bại")
-                    )
-                }
+            val profile = service.getProfile(userId)
+            call.respond(HttpStatusCode.OK, successResponse(profile, "Lấy hồ sơ thành công"))
+        }
 
-            }
+        // ===== UPDATE PROFILE =====
+        patch {
+            val userId = call.getUserIdOrRespond() ?: return@patch
+            val request = call.receive<UpdateProfileRequest>()
 
-            get("/{id}") {
-                val id = call.getUserId()
-                if (id == null) {
-                    call.respond(HttpStatusCode.BadRequest, errorResponse("Thiếu id"))
-                    return@get
-                }
-                val profile = profileService.getProfile(id)
-                call.respond(
-                    HttpStatusCode.OK,
-                    successResponse(profile, "Lấy hồ sơ cá nhân thành công")
-                )
-            }
+            val success = service.updateProfile(userId, request)
+
+            call.respond(
+                if (success) HttpStatusCode.OK else HttpStatusCode.BadRequest,
+                if (success)
+                    successResponse(null, "Cập nhật thông tin thành công")
+                else
+                    errorResponse("Cập nhật thất bại")
+            )
         }
     }
 }

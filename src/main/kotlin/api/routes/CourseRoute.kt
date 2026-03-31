@@ -5,7 +5,7 @@ import api.models.enum.UserRole
 import api.utils.getLongParamOrRespond
 import api.utils.getUserIdOrRespond
 import api.utils.handleResult
-import com.lexa.api.services.CoursesService
+import api.services.CoursesService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond

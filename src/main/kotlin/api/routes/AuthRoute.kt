@@ -19,7 +19,7 @@ import api.models.enum.ProviderType
 import api.services.AuthService
 import com.lexa.api.plugins.applicationHttpClient
 import com.lexa.api.plugins.redirects
-import com.lexa.api.services.CoursesService
+import api.services.CoursesService
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header

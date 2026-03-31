@@ -1,4 +1,4 @@
-package com.lexa.api.services
+package api.services
 
 import api.models.dto.ShortCourseDto
 import api.models.dto.CreateCourseRequest

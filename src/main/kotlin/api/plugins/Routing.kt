@@ -1,4 +1,4 @@
-package com.lexa.api.plugins
+package api.plugins
 
 import api.repository.AuthRepository
 import api.repository.CoursesRepository
@@ -19,8 +19,8 @@ import api.services.FlashcardService
 import api.services.ParagraphService
 import api.services.SpeakingDayService
 import api.services.ProfileService
-import com.lexa.api.routes.courseRoutes
-import com.lexa.api.services.CoursesService
+import api.routes.courseRoutes
+import api.services.CoursesService
 import io.ktor.server.application.*
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
@@ -29,13 +29,13 @@ import io.ktor.server.sessions.cookie
 
 fun Application.configureRouting() {
     routing {
-        courseRoutes(coursesService = CoursesService(CoursesRepository()))
+        courseRoutes(service = CoursesService(CoursesRepository()))
         authRoutes(authService = AuthService(AuthRepository()))
-        deckRoutes(deckService = DeckService(DeckRepository()))
-        flashcardRoutes(flashcardService = FlashcardService(FlashcardRepository()))
-        speakingDayRoutes(speakingDayService = SpeakingDayService(SpeakingDayRepository()))
-        profileRoutes(profileService = ProfileService(ProfileRepository()))
-        paragraphRoute(paragraphService = ParagraphService(ParagraphRepository()))
+        deckRoutes(service = DeckService(DeckRepository()))
+        flashcardRoutes(service = FlashcardService(FlashcardRepository()))
+        speakingDayRoutes(service = SpeakingDayService(SpeakingDayRepository()))
+        profileRoutes(service = ProfileService(ProfileRepository()))
+        paragraphRoute(service = ParagraphService(ParagraphRepository()))
     }
 
 //    routing {

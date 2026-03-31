@@ -80,13 +80,17 @@ fun Route.courseRoutes(service: CoursesService) {
 
             val data = service.getSpeakingDayCourse(userId, courseId)
 
-            call.respond(
-                if (data != null) HttpStatusCode.OK else HttpStatusCode.NotFound,
-                if (data != null)
+            if (data != null) {
+                call.respond<ApiResponse<SpeakingCourseDetailDto>>(
+                    HttpStatusCode.OK,
                     successResponse(data, "Chi tiết khóa học")
-                else
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
                     errorResponse("Không tìm thấy hoặc private")
-            )
+                )
+            }
         }
     }
 

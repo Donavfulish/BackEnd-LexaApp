@@ -2,7 +2,9 @@ package api.repository
 
 import api.models.dto.CreateFlashcardRequest
 import api.models.dto.DetailFlashcard
+import api.models.dto.DetailFlashcardWithResult
 import api.models.dto.UpdateFlashcardRequest
+import api.models.enum.ProgressStatus
 import api.models.tables.FlashcardDecksTable
 import api.models.tables.FlashcardResultsTable
 import api.models.tables.FlashcardsTable
@@ -13,6 +15,7 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insertAndGetId
+import org.jetbrains.exposed.sql.leftJoin
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.update
 
@@ -35,7 +38,47 @@ class FlashcardRepository {
             }
     }
 
+    suspend fun getAllFlashcardWithResult(deckId: Long, userId: Int): List<DetailFlashcardWithResult> = dbQuery {
+        (FlashcardsTable
+            .innerJoin (PartOfSpeechesTable)
+            .leftJoin(
+                FlashcardResultsTable,
+                onColumn = { FlashcardsTable.id },
+                otherColumn = { FlashcardResultsTable.flashcardId },
+                additionalConstraint = { FlashcardResultsTable.userId eq userId }
+            )
+        )
+            .select {
+                FlashcardsTable.deckId eq deckId
+            }
+            .map { row ->
 
+                val status = row[FlashcardResultsTable.status]
+
+                val finalStatus = when {
+                    status == null -> ProgressStatus.FORGOTTEN
+                    status == ProgressStatus.FORGOTTEN -> ProgressStatus.FORGOTTEN
+                    else -> status
+                }
+
+
+                DetailFlashcardWithResult(
+                    flashCard = DetailFlashcard(
+                        id = row[FlashcardsTable.id].value.toInt(),
+                        word = row[FlashcardsTable.word],
+                        transcription = row[FlashcardsTable.transcription] ?: "",
+                        type = row[FlashcardsTable.type]?.name ?: "",
+                        deckId = row[FlashcardsTable.deckId].value.toInt(),
+                        imageUrl = row[FlashcardsTable.imageUrl],
+                        audioUrl = row[FlashcardsTable.audioUrl],
+                        meaning = row[FlashcardsTable.meaningVi] ?: "",
+                        example = row[FlashcardsTable.example],
+                        partOfSpeech = row[PartOfSpeechesTable.name] ?: "",
+                        ),
+                    result = finalStatus
+                )
+            }
+    }
 
     suspend fun updateFlashcard(userId: Int, request: UpdateFlashcardRequest) : Boolean = dbQuery {
         val checkOwner = (FlashcardsTable innerJoin FlashcardDecksTable)

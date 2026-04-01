@@ -78,4 +78,14 @@ fun Route.flashcardRoutes(service: FlashcardService) {
             )
         }
     }
+
+    secureRoute("api/decks/{deckId}/flashcards/result") {
+        get {
+            val deckId = call.getLongParamOrRespond("deckId") ?: return@get
+            val userId = call.getUserIdOrRespond() ?: return@get
+
+            val data =service.getAllFlashcardWithResult(deckId, userId)
+            call.respond(HttpStatusCode.OK, successResponse(data, "Lấy danh sách FC kèm kết quả thành công"))
+        }
+    }
 }

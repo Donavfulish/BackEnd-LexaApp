@@ -2,6 +2,7 @@ package api.services
 
 import api.models.dto.CreateFlashcardRequest
 import api.models.dto.DetailFlashcard
+import api.models.dto.DetailFlashcardWithResult
 import api.models.dto.UpdateFlashcardRequest
 import api.repository.FlashcardRepository
 
@@ -10,6 +11,10 @@ class FlashcardService(
 ) {
     suspend fun getAllFlashcard(deckId: Long): List<DetailFlashcard>{
         return flashcardRepository.getAllFlashcard(deckId);
+    }
+
+    suspend fun getAllFlashcardWithResult(deckId: Long, userId: Int): List<DetailFlashcardWithResult> {
+        return flashcardRepository.getAllFlashcardWithResult(deckId, userId)
     }
 
     suspend fun addFlashcard(userId: Int, request: CreateFlashcardRequest): Result<Long> {

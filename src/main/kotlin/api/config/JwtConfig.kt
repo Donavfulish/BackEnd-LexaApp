@@ -15,7 +15,7 @@ import java.util.*
 val dotenv = dotenv()
 
 object JwtConfig {
-    private const val validityInMs = 60_000 * 15 // 15 phút
+    private const val validityInMs = 5000//60_000 * 15 // 15 phút
 
     private val algorithm = Algorithm.HMAC256(dotenv["JWT_SECRET"])
 

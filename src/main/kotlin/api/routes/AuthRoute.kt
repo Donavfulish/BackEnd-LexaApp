@@ -99,9 +99,12 @@ fun Route.authRoutes(authService: AuthService) {
 
     route("/api/auth/refresh") {
         post {
-            val refreshToken = call.receive<RefreshRequest>()
+            val request = call.receive<RefreshRequest>()
 
-            val result = authService.refreshAccessToken(refreshToken)
+
+            println("refreshToken: ${request.refreshToken}")
+
+            val result = authService.refreshAccessToken(request)
 
             if (result.ok) {
                 call.respond(

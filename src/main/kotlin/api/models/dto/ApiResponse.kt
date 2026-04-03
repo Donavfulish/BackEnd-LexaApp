@@ -30,15 +30,15 @@ fun <T> successResponse(
     data: T,
     message: String = "Thành công"
 ): ApiResponse<T> {
-    return ApiResponse(
-        success = true,
-        message = message,
-        data = data
-    )
+    return ApiResponse(true, message, data)
 }
 
-fun errorResponse(message: String): ErrorResponse {
-    return ErrorResponse(
-        message = message
-    )
+fun successResponse(
+    message: String = "Thành công"
+): ApiResponse<Unit> {
+    return ApiResponse(true, message, null)
+}
+
+fun errorResponse(message: String): ApiResponse<Unit> {
+    return ApiResponse(false, message, null)
 }

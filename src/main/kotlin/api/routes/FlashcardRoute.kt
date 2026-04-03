@@ -79,7 +79,7 @@ fun Route.flashcardRoutes(service: FlashcardService) {
         }
     }
 
-    secureRoute("api/decks/{deckId}/flashcards/result") {
+    secureRoute("/api/decks/{deckId}/flashcards/result") {
         get {
             val deckId = call.getLongParamOrRespond("deckId") ?: return@get
             val userId = call.getUserIdOrRespond() ?: return@get
@@ -87,5 +87,32 @@ fun Route.flashcardRoutes(service: FlashcardService) {
             val data =service.getAllFlashcardWithResult(deckId, userId)
             call.respond(HttpStatusCode.OK, successResponse(data, "Lấy danh sách FC kèm kết quả thành công"))
         }
+
+        // ===== BATCH UPDATE RESULTS =====
+        patch {
+            val deckId = call.getLongParamOrRespond("deckId") ?: return@patch
+            val userId = call.getUserIdOrRespond() ?: return@patch
+            val request = call.receive<UpdateFlashcardResultRequest>()
+
+            // Kiểm tra bảo mật: đảm bảo deckId trên URL khớp với dữ liệu gửi lên
+            if (deckId != request.deckId) {
+                call.respond(HttpStatusCode.BadRequest, errorResponse("Deck ID không khớp"))
+                return@patch
+            }
+
+            service.updateFlashcardResults(userId, request).handleResult(
+                onSuccess = { success ->
+                    call.respond(
+                        if (success) HttpStatusCode.OK else HttpStatusCode.BadRequest,
+                        if (success) successResponse(null, "Cập nhật kết quả flashcard thành công")
+                        else errorResponse("Không thể cập nhật kết quả flashcard")
+                    )
+                },
+                onError = {
+                    call.respond(HttpStatusCode.InternalServerError, errorResponse(it))
+                }
+            )
+        }
     }
+
 }

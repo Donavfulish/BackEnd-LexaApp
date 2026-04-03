@@ -23,10 +23,10 @@ data class CreateFlashcardRequest(
     val transcription: String,
     val typeId: Int,
     val deckId: Long,
-    val imageUrl: String?,
-    val audioUrl: String?,
+    val imageUrl: String? = null,
+    val audioUrl: String? = null,
     val meaning: String,
-    val example: String?,
+    val example: String? = null,
     val partOfSpeechId: Int
 )
 

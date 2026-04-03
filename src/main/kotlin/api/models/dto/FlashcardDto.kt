@@ -52,7 +52,14 @@ data class UpdateFlashcardRequest(
 )
 
 
-//@Serializable
-//data class UpdateFlashcardResultRequest(
-//
-//)
+@Serializable
+data class FlashcardResultItem(
+    val flashcardId: Long,
+    val status: ProgressStatus? = null
+)
+
+@Serializable
+data class UpdateFlashcardResultRequest(
+    val deckId: Long,
+    val results: List<FlashcardResultItem>
+)

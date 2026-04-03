@@ -18,7 +18,8 @@ object AuthUtil {
             id = id,
             email = email,
             name = name,
-            role = role
+            role = role,
+            isEmailVerified = isEmailVerified
         )
     }
 }

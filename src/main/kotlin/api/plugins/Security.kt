@@ -78,7 +78,10 @@ fun Application.configureSecurity(httpClient: HttpClient) {
                     null
                 }
             }
-            challenge { _, _ ->
+            challenge { defaultScheme, realm ->
+                // Thêm Header WWW-Authenticate: Bearer
+                call.response.headers.append(HttpHeaders.WWWAuthenticate, "Bearer realm=\"$realm\"")
+
                 call.respondText(
                     text = "Token expired or invalid",
                     status = HttpStatusCode.Unauthorized

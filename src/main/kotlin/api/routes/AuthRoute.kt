@@ -200,6 +200,8 @@ fun Route.authRoutes(authService: AuthService) {
                 picture = googleUserInfo.picture
             )
 
+            val isAccountRegistered = authService.isOAuthUserExisted(googleUserInfo.sub ?: "", ProviderType.GOOGLE)
+
             val googleAccessToken = JwtConfig.generateGoogleAccessToken(oauthUserInfo)
 
             println("Google Access Token: $googleAccessToken")
@@ -212,6 +214,7 @@ fun Route.authRoutes(authService: AuthService) {
                 parameters.append("token", googleAccessToken)
                 parameters.append("email", oauthUserInfo.email)
                 parameters.append("name", oauthUserInfo.name)
+                parameters.append("registered", isAccountRegistered.toString())
                 oauthUserInfo.picture?.let { parameters.append("avatar", it) }
             }.buildString()
 
@@ -243,9 +246,51 @@ fun Route.authRoutes(authService: AuthService) {
 
                 if (googleSub == null) { call.respond(HttpStatusCode.Unauthorized, mapOf("sub" to googleSub)) }
 
-                val registerRequest = call.receive<OAuthRegisterRequest>()
+                //val registerRequest = call.receive<OAuthRegisterRequest>()
 
-                val result = authService.signupOAuth(registerRequest, googleSub!!)
+                val multipart = call.receiveMultipart()
+                var registerRequest: OAuthRegisterRequest? = null
+                var languageCertBytes: ByteArray? = null
+                var pedagogyCertBytes: ByteArray? = null
+
+                multipart.forEachPart { part ->
+                    when (part) {
+                        is PartData.FormItem -> {
+                            if (part.name == "data") {
+                                val jsonString = part.value
+                                registerRequest = Json.decodeFromString<OAuthRegisterRequest>(jsonString)
+                            }
+                        }
+                        is PartData.FileItem -> {
+                            val fileBytes = part.provider().readRemaining().readByteArray()
+                            when (part.name) {
+                                "languageCert" -> languageCertBytes = fileBytes
+                                "pedagogyCert" -> pedagogyCertBytes = fileBytes
+                            }
+                            part.dispose()
+                        }
+                        else -> part.dispose()
+                    }
+                }
+
+                if (registerRequest == null) {
+                    call.respond(HttpStatusCode.BadRequest, "Thiếu dữ liệu đăng ký")
+                }
+
+                // Cập nhật đường dẫn file của payload thành đường dẫn được lưu trên Server
+                languageCertBytes?.let { bytes ->
+                    val fileName = FileUtil.generateUniqueFileName("languageCert", "image.jpg")
+                    val savedPath = FileUtil.saveFileToDisk(bytes, fileName)
+                    registerRequest!!.english_certificate_url = savedPath
+                }
+
+                pedagogyCertBytes?.let { bytes ->
+                    val fileName = FileUtil.generateUniqueFileName("pedagogyCert", "image.jpg")
+                    val savedPath = FileUtil.saveFileToDisk(bytes, fileName)
+                    registerRequest!!.pedagogical_certificate_url = savedPath
+                }
+
+                val result = authService.signupOAuth(registerRequest!!, googleSub!!)
 
                 if (result.ok) {
                     call.respond(
@@ -272,8 +317,8 @@ fun Route.authRoutes(authService: AuthService) {
         }
     }
 
-    route("/api/auth/send-otp") {
-        post {
+    route("/api/auth/otp") {
+        post("/send") {
             val request = call.receive<OtpRequest>()
             val otpCode = (100000..999999).random().toString()
 
@@ -289,17 +334,15 @@ fun Route.authRoutes(authService: AuthService) {
                 call.respond(HttpStatusCode.InternalServerError, "Không thể gửi mail: ${e.message}")
             }
         }
-    }
 
-    route("/api/auth/verify-otp") {
-        post {
+        post("/verify") {
             val request = call.receive<OtpVerify>()
 
             try {
                 val verifyResult = authService.verifyOtpEmail(request.email, request.otp)
 
                 if (verifyResult) {
-                    call.respond(HttpStatusCode.OK, successResponse(null,"Mã OTP hợp lệ"))
+                    call.respond(HttpStatusCode.OK, successResponse(null, "Mã OTP hợp lệ"))
                 } else {
                     call.respond(HttpStatusCode.BadRequest, ErrorResponse(false, "Mã OTP không đúng hoặc đã hết hạn"))
                 }

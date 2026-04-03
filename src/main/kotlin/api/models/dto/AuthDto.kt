@@ -34,8 +34,8 @@ data class OAuthUserInfo(
 data class SignupRequest(
     val name: String,
     val email: String,
-    val date_of_birth: String,
-    val address: String,
+    val date_of_birth: String?,
+    val address: String?,
     val role: UserRole,
     var english_certificate_url: String?= null,
     var pedagogical_certificate_url: String? = null,
@@ -63,7 +63,8 @@ data class UserInfo (
     val email: String?,
     val name: String,
     val role: UserRole,
-    val passwordHash: String? = ""
+    val passwordHash: String? = "",
+    val isEmailVerified: Boolean? = false,
 )
 
 @Serializable
@@ -71,7 +72,8 @@ data class UserResponse(
     val id: Int,
     val email: String? = null,
     val name: String,
-    val role: UserRole
+    val role: UserRole,
+    val isEmailVerified: Boolean? = false,
 )
 
 @Serializable
@@ -92,6 +94,6 @@ data class OAuthRegisterRequest (
     val email: String? = null,
     val address: String,
     val role: UserRole,
-    val english_certificate_url: String? = null,
-    val pedagogical_certificate_url: String? = null
+    var english_certificate_url: String? = null,
+    var pedagogical_certificate_url: String? = null
 )

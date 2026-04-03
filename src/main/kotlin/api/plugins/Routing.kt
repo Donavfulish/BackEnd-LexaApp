@@ -39,12 +39,8 @@ fun Application.configureRouting() {
         flashcardRoutes(service = FlashcardService(FlashcardRepository()))
         speakingDayRoutes(service = SpeakingDayService(SpeakingDayRepository()))
         profileRoutes(service = ProfileService(ProfileRepository()))
-
-        // Tham số 1: URL path mà người dùng sẽ gõ (ví dụ: /uploads/abc.jpg)
-        // Tham số 2: Thư mục vật lý trên ổ cứng
         paragraphRoute(service = ParagraphService(ParagraphRepository()))
         staticFiles("/uploads", File("uploads")) {
-            // Cấu hình thêm (tùy chọn)
             enableAutoHeadResponse()
         }
     }

@@ -36,7 +36,8 @@ class AuthRepository {
                     name = row[UsersTable.name],
                     email = row[UsersTable.email],
                     passwordHash = row[UsersTable.passwordHash],
-                    role = row[UsersTable.role]
+                    role = row[UsersTable.role],
+                    isEmailVerified = row[UsersTable.emailVerified]
                 )
             }
             .singleOrNull()
@@ -51,7 +52,8 @@ class AuthRepository {
                     name = row[UsersTable.name],
                     email = row[UsersTable.email],
                     passwordHash = row[UsersTable.passwordHash],
-                    role = row[UsersTable.role]
+                    role = row[UsersTable.role],
+                    isEmailVerified = row[UsersTable.emailVerified]
                 )
             }
             .singleOrNull()
@@ -71,8 +73,10 @@ class AuthRepository {
             it[role] = signupRequest.role
             it[languageCertificate] = signupRequest.english_certificate_url
             it[teachingDegree] = signupRequest.pedagogical_certificate_url
-            it[dateOfBirth] = LocalDate.parse(signupRequest.date_of_birth)
-            it[emailVerified] = true
+            it[dateOfBirth] = signupRequest.date_of_birth
+                ?.takeIf { it.isNotBlank() } // Chỉ đi tiếp nếu chuỗi không rỗng
+                ?.let { LocalDate.parse(it) }
+            it[emailVerified] = false
         }
 
         val row = result.resultedValues!!.first()
@@ -134,6 +138,14 @@ class AuthRepository {
             it[isUsed] = true
         }
 
+        if (updateCount > 0) {
+            UsersTable.update({
+                UsersTable.email eq _email
+            }) {
+                it[emailVerified] = true
+            }
+        }
+
         updateCount > 0
     }
 
@@ -181,8 +193,17 @@ class AuthRepository {
                     email = row[UsersTable.email],
                     name = row[UsersTable.name],
                     role = row[UsersTable.role],
+                    isEmailVerified = row[UsersTable.emailVerified]
                 )
             }
             .singleOrNull()
+    }
+
+    suspend fun isOAuthUserExisted(sub: String, provider: ProviderType): Boolean = dbQuery {
+        !AuthProviderTable
+            .select {
+            (AuthProviderTable.provider eq provider) and
+                    (AuthProviderTable.providerUserId eq sub)
+        }.empty()
     }
 }

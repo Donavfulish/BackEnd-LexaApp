@@ -18,11 +18,11 @@ object FileUtil {
     // 2. Hàm lưu mảng Byte vào thư mục
     fun saveFileToDisk(bytes: ByteArray, fileName: String): String {
         val uploadDir = File("uploads/certificates")
-        if (!uploadDir.exists()) uploadDir.mkdirs() // Tự động tạo thư mục nếu chưa có
+        if (!uploadDir.exists()) uploadDir.mkdirs()
 
         val file = File(uploadDir, fileName)
         file.writeBytes(bytes)
 
-        return file.absolutePath // Trả về đường dẫn để lưu vào Database nếu cần
+        return "uploads/certificates/$fileName"
     }
 }

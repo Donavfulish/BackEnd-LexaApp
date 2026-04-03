@@ -142,6 +142,10 @@ class AuthService (
         return authRepository.verifyOTP(recipientEmail, otpCode)
     }
 
+    suspend fun isOAuthUserExisted(sub: String, provider: ProviderType): Boolean {
+        return authRepository.isOAuthUserExisted(sub, provider)
+    }
+
     suspend fun checkOAuth(sub: String, provider: ProviderType): AuthResult {
         val user = authRepository.getUserFromOAuth(sub, provider)
 

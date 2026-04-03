@@ -77,9 +77,9 @@ class DeckRepository {
         }.insertedCount > 0
     }
 
-    suspend fun updateDeckResult(request: UpdateDeckResultRequest): Boolean = dbQuery {
+    suspend fun updateDeckResult(request: UpdateDeckResultRequest, userId: Int): Boolean = dbQuery {
         DeckResultsTable.update({
-            (DeckResultsTable.deckId eq request.deckId) and (DeckResultsTable.userId eq request.userId)}){
+            (DeckResultsTable.deckId eq request.deckId) and (DeckResultsTable.userId eq userId)}){
             it[rememberedCount] = request.rememberedCount
             it[forgottenCount] = request.forgottenCount
         } > 0
@@ -98,6 +98,7 @@ class DeckRepository {
             }
             .singleOrNull()
     }
+
     suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> = dbQuery {
 
         UserFavoriteDecksTable
@@ -153,6 +154,7 @@ class DeckRepository {
                 )
             }
     }
+    
     suspend fun getAllDecks(userId: Int?): List<DeckDto> = dbQuery {
         val vocabCountExpr = wrapAsExpression<Long>(
             FlashcardsTable

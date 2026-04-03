@@ -48,7 +48,6 @@ data class CreateDeckResultRequest(
 @Serializable
 data class UpdateDeckResultRequest(
     val deckId: Long,
-    val userId: Int,
     val rememberedCount: Int,
     val forgottenCount: Int
 )

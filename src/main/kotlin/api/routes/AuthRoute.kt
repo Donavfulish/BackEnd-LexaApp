@@ -20,6 +20,7 @@ import api.services.AuthService
 import com.lexa.api.plugins.applicationHttpClient
 import com.lexa.api.plugins.redirects
 import api.services.CoursesService
+import api.utils.FileUtil
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -28,6 +29,9 @@ import io.ktor.http.ContentType
 import io.ktor.http.HttpHeaders
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.URLBuilder
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
+import io.ktor.http.content.streamProvider
 import io.ktor.http.headers
 import io.ktor.server.application.call
 import io.ktor.server.auth.OAuthAccessTokenResponse
@@ -35,6 +39,7 @@ import io.ktor.server.auth.authenticate
 import io.ktor.server.auth.jwt.JWTPrincipal
 import io.ktor.server.auth.principal
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.Route
@@ -43,6 +48,9 @@ import io.ktor.server.routing.header
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.sessions.sessions
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
+import kotlinx.serialization.json.Json
 
 fun Route.authRoutes(authService: AuthService) {
     route("api/auth/login") {
@@ -65,17 +73,49 @@ fun Route.authRoutes(authService: AuthService) {
     }
     route("api/auth/signup") {
         post {
-            /*
-            *   {
-                  "name": "Huỳnh Gia Bịp",
-                  "email": "hgau23@clc.fitus.edu.vn",
-                  "role": "TEACHER",
-                  "password": "12345678"
-                }
-            * */
-            val signupRequest = call.receive<SignupRequest>()
+            val multipart = call.receiveMultipart()
+            var signupRequest: SignupRequest? = null
+            var languageCertBytes: ByteArray? = null
+            var pedagogyCertBytes: ByteArray? = null
 
-            val result = authService.signup(signupRequest)
+            multipart.forEachPart { part ->
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "data") {
+                            val jsonString = part.value
+                            signupRequest = Json.decodeFromString<SignupRequest>(jsonString)
+                        }
+                    }
+                    is PartData.FileItem -> {
+                        val fileBytes = part.provider().readRemaining().readByteArray()
+                        when (part.name) {
+                            "languageCert" -> languageCertBytes = fileBytes
+                            "pedagogyCert" -> pedagogyCertBytes = fileBytes
+                        }
+                        part.dispose()
+                    }
+                    else -> part.dispose()
+                }
+            }
+
+            if (signupRequest == null) {
+                call.respond(HttpStatusCode.BadRequest, "Thiếu dữ liệu đăng ký")
+            }
+
+            // Cập nhật đường dẫn file của payload thành đường dẫn được lưu trên Server
+            languageCertBytes?.let { bytes ->
+                val fileName = FileUtil.generateUniqueFileName("languageCert", "image.jpg")
+                val savedPath = FileUtil.saveFileToDisk(bytes, fileName)
+                signupRequest!!.english_certificate_url = savedPath
+            }
+
+            pedagogyCertBytes?.let { bytes ->
+                val fileName = FileUtil.generateUniqueFileName("pedagogyCert", "image.jpg")
+                val savedPath = FileUtil.saveFileToDisk(bytes, fileName)
+                signupRequest!!.pedagogical_certificate_url = savedPath
+            }
+
+            val result = authService.signup(signupRequest!!)
 
             call.respond(
                 HttpStatusCode.OK,

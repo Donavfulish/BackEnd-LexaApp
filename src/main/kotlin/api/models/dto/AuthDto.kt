@@ -37,8 +37,8 @@ data class SignupRequest(
     val date_of_birth: String,
     val address: String,
     val role: UserRole,
-    val english_certificate_url: String?= null,
-    val pedagogical_certificate_url: String? = null,
+    var english_certificate_url: String?= null,
+    var pedagogical_certificate_url: String? = null,
     val password: String
 )
 

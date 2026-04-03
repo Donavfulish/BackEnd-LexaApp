@@ -22,10 +22,14 @@ import api.services.ProfileService
 import api.routes.courseRoutes
 import api.services.CoursesService
 import io.ktor.server.application.*
+import io.ktor.server.http.content.files
+import io.ktor.server.http.content.static
+import io.ktor.server.http.content.staticFiles
 import io.ktor.server.response.*
 import io.ktor.server.routing.*
 import io.ktor.server.sessions.Sessions
 import io.ktor.server.sessions.cookie
+import java.io.File
 
 fun Application.configureRouting() {
     routing {
@@ -35,7 +39,14 @@ fun Application.configureRouting() {
         flashcardRoutes(service = FlashcardService(FlashcardRepository()))
         speakingDayRoutes(service = SpeakingDayService(SpeakingDayRepository()))
         profileRoutes(service = ProfileService(ProfileRepository()))
+
+        // Tham số 1: URL path mà người dùng sẽ gõ (ví dụ: /uploads/abc.jpg)
+        // Tham số 2: Thư mục vật lý trên ổ cứng
         paragraphRoute(service = ParagraphService(ParagraphRepository()))
+        staticFiles("/uploads", File("uploads")) {
+            // Cấu hình thêm (tùy chọn)
+            enableAutoHeadResponse()
+        }
     }
 
 //    routing {

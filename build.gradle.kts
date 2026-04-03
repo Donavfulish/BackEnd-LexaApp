@@ -63,4 +63,7 @@ dependencies {
 
     // Thư viện Serialization cơ bản
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.6.x")
+
+    // Đảm bảo bạn cũng có core client nếu chưa có
+    implementation("io.ktor:ktor-client-core:${ktor_version}")
 }

@@ -178,11 +178,14 @@ class DeckRepository {
             DeckDto(
                 id = row[FlashcardDecksTable.id].value,
                 title = row[FlashcardDecksTable.title],
-                topic = TopicDto(
-                    id = row[TopicsTable.id].value,
-                    name = row[TopicsTable.name] ?: "",
-                    colorHex = row[TopicsTable.color] ?: "#FFFFFF",
-                ),
+                topic = row.getOrNull(TopicsTable.id)?.let { topicId ->
+                    TopicDto(
+                        id = topicId.value,
+                        // Lưu ý: Cũng nên dùng getOrNull cho các cột khác của bảng right
+                        name = row.getOrNull(TopicsTable.name) ?: "",
+                        colorHex = row.getOrNull(TopicsTable.color) ?: "#FFFFFF",
+                    )
+                },
                 vocabNumber = row[vocabCountExpr]?.toInt() ?: 0,
                 createdAt = convertTime(row[FlashcardDecksTable.createdAt])
             )

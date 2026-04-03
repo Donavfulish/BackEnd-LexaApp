@@ -34,8 +34,8 @@ data class OAuthUserInfo(
 data class SignupRequest(
     val name: String,
     val email: String,
-    val date_of_birth: String?,
-    val address: String?,
+    val date_of_birth: String? = null,
+    val address: String? = null,
     val role: UserRole,
     var english_certificate_url: String?= null,
     var pedagogical_certificate_url: String? = null,
@@ -92,7 +92,7 @@ data class OAuthRegisterRequest (
     val provider: ProviderType,
     val name: String,
     val email: String? = null,
-    val address: String,
+    val address: String? = null,
     val role: UserRole,
     var english_certificate_url: String? = null,
     var pedagogical_certificate_url: String? = null

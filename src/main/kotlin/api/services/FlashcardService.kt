@@ -4,6 +4,7 @@ import api.models.dto.CreateFlashcardRequest
 import api.models.dto.DetailFlashcard
 import api.models.dto.DetailFlashcardWithResult
 import api.models.dto.UpdateFlashcardRequest
+import api.models.dto.UpdateFlashcardResultRequest
 import api.repository.FlashcardRepository
 
 class FlashcardService(
@@ -54,6 +55,19 @@ class FlashcardService(
                 Result.success(success)
             } else {
                 Result.failure(Exception("Flashcard không tồn tại hoặc bạn không có quyền xoá"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun updateFlashcardResults(userId: Int, request: UpdateFlashcardResultRequest): Result<Boolean> {
+        return try {
+            val success = flashcardRepository.updateFlashcardResults(userId, request)
+            if (success) {
+                Result.success(true)
+            } else {
+                Result.failure(Exception("Lỗi khi cập nhật danh sách kết quả thẻ!"))
             }
         } catch (e: Exception) {
             Result.failure(e)

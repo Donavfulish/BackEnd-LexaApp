@@ -21,6 +21,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
 import io.github.cdimascio.dotenv.dotenv
+import org.apache.commons.logging.Log
 import java.util.Properties
 
 val dotenv = dotenv()
@@ -42,6 +43,7 @@ class AuthService (
             return AuthResult(false, "Email hoặc mật khẩu không chính xác")
         }
 
+        println(user)
         // 3. Tạo cặp Token mới
         val accessToken = JwtConfig.generateAccessToken(user)
         val refreshToken = JwtConfig.generateRefreshToken(user)

@@ -1,5 +1,6 @@
 package api.routes
 
+import api.config.getUserId
 import api.config.getUserRole
 import api.models.dto.errorResponse
 import api.models.enum.UserRole
@@ -8,6 +9,7 @@ import io.ktor.server.application.*
 import io.ktor.server.auth.authenticate
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
+import org.apache.commons.logging.Log
 
 fun Route.secureRoute(
     path: String,
@@ -16,9 +18,8 @@ fun Route.secureRoute(
 ): Route {
     return route(path) {
         authenticate("auth-jwt") {
-
             if (roles != null) {
-                intercept(ApplicationCallPipeline.Plugins) {
+                intercept(ApplicationCallPipeline.Call) {
 
                     val roleString = call.getUserRole()
                     val role = roleString?.let {
@@ -28,7 +29,7 @@ fun Route.secureRoute(
                     if (role == null || role !in roles) {
                         call.respond(
                             HttpStatusCode.Forbidden,
-                            errorResponse("Bạn không có quyền truy cập")
+                            errorResponse("Bạn không có quyền truy cập: user là $roleString")
                         )
                         finish()
                     }

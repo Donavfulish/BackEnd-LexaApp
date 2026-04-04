@@ -14,7 +14,7 @@ class ParagraphService(
 
     suspend fun createParagraph(request: CreateParagraphRequest, userRole: String?): Result<ParagraphResponseDto> {
         // 1. Validate Role (Sử dụng Enum để an toàn)
-        if (userRole != UserRole.TEACHER.name) {
+        if (userRole != UserRole.TEACHER.toString()) {
             return Result.failure(Exception("FORBIDDEN_ROLE"))
         }
 
@@ -42,7 +42,7 @@ class ParagraphService(
         request: UpdateParagraphRequest,
         userRole: String?
     ): Result<ParagraphResponseDto> {
-        if (userRole != UserRole.TEACHER.name) {
+        if (userRole != UserRole.TEACHER.toString()) {
             return Result.failure(Exception("FORBIDDEN_ROLE"))
         }
 
@@ -66,7 +66,7 @@ class ParagraphService(
         paragraphId: Long,
         userRole: String?
     ): Result<Unit> {
-        if (userRole != UserRole.TEACHER.name) {
+        if (userRole != UserRole.TEACHER.toString()) {
             return Result.failure(Exception("FORBIDDEN_ROLE"))
         }
 

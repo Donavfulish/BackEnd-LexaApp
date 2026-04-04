@@ -20,6 +20,7 @@ import org.jetbrains.exposed.sql.ResultRow
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
 import com.google.api.client.http.javanet.NetHttpTransport
 import com.google.api.client.json.gson.GsonFactory
+import com.lexa.api.config.DatabaseFactory.dbQuery
 import io.github.cdimascio.dotenv.dotenv
 import java.util.Properties
 
@@ -72,6 +73,14 @@ class AuthService (
         authRepository.storeRefreshToken(user.id, refreshToken)
 
         return AuthResult(true, "Đăng ký thành công", user.id, user.toResponse(), accessToken, refreshToken)
+    }
+
+    suspend fun getUserById(id: Int): UserInfo? {
+        return authRepository.findById(id)
+    }
+
+    suspend fun logout(id: Int) {
+        authRepository.deleteRefreshToken(id)
     }
 
     suspend fun refreshAccessToken(refreshRequest: RefreshRequest): AuthResult  {

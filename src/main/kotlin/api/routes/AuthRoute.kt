@@ -16,6 +16,7 @@ import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
 import api.models.dto.successResponse
 import api.models.enum.ProviderType
+import api.models.enum.UserRole
 import api.services.AuthService
 import com.lexa.api.plugins.applicationHttpClient
 import com.lexa.api.plugins.redirects
@@ -161,8 +162,38 @@ fun Route.authRoutes(authService: AuthService) {
 
     }
 
-    route("/api/auth/me") {
+    secureRoute("/api/auth") {
+        get("/me") {
+            val userId = call.getUserId()
 
+            if (userId == null) call.respond(
+                HttpStatusCode.BadRequest,
+                "Token thiếu userId"
+            )
+
+            val result = authService.getUserById(userId!!)
+
+            call.respond(
+                HttpStatusCode.OK,
+                successResponse(result)
+            )
+        }
+
+        post("/logout") {
+            val userId = call.getUserId()
+
+            if (userId == null) call.respond(
+                HttpStatusCode.BadRequest,
+                "Token thiếu userId"
+            )
+
+            val result = authService.logout(userId!!)
+
+            call.respond(
+                HttpStatusCode.OK,
+                "Đăng xuất thành công"
+            )
+        }
     }
 
     authenticate("oauth-google") {

@@ -20,32 +20,27 @@ import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.update
 import org.jetbrains.exposed.sql.innerJoin
 class SpeakingDayRepository {
-    suspend fun getParagraphSpeakingDay(speakingDayId: Long): List<ShortParagraphSpeakingDayDto> = dbQuery {
-
+    suspend fun getParagraphSpeakingDay(speakingDayId: Long): ShortParagraphSpeakingDayDto? = dbQuery {
         SpeakingDaysTable
-            .select(SpeakingDaysTable.id eq speakingDayId)
-            .map { row ->
+        .select { SpeakingDaysTable.id eq speakingDayId }
+        .map { row ->
+            val paragraphs = SpeakingParagraphsTable
+                .select { SpeakingParagraphsTable.speakingDayId eq speakingDayId }
+                .orderBy(SpeakingParagraphsTable.paragraphOrder to SortOrder.ASC)
+                .map { pRow ->
+                    ShortParagraphDto(
+                        id = pRow[SpeakingParagraphsTable.id].value,
+                        paragraph = pRow[SpeakingParagraphsTable.paragraph],
+                        paragraph_order = pRow[SpeakingParagraphsTable.paragraphOrder]
+                    )
+                }
 
-                val list_paragraphs = SpeakingParagraphsTable
-                    .select { SpeakingParagraphsTable.speakingDayId eq speakingDayId }
-                    .orderBy(SpeakingParagraphsTable.paragraphOrder to SortOrder.ASC)
-                    .map { row ->
-
-
-                        ShortParagraphDto(
-                            id = row[SpeakingParagraphsTable.id].value,
-                            paragraph = row[SpeakingParagraphsTable.paragraph],
-                            paragraph_order = row[SpeakingParagraphsTable.paragraphOrder]
-                        )
-                    }
-
-
-                ShortParagraphSpeakingDayDto(
-                    title = row[SpeakingDaysTable.title],
-                    list_paragraphs = list_paragraphs,
-                )
-            }
-
+            ShortParagraphSpeakingDayDto(
+                title = row[SpeakingDaysTable.title],
+                list_paragraphs = paragraphs
+            )
+        }
+        .singleOrNull()
     }
 
     suspend fun addSpeakingDay(userId: Int, speakingDay: CreateSpeakingDayRequest): Long = dbQuery {

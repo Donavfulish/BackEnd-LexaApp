@@ -9,16 +9,16 @@ import kotlinx.serialization.Serializable
 @Serializable
 data class ShortSpeakingDayDto(
     val title: String,
-    val completed: Int
+    val completed: Int,
+    val paragraphNum: Int
 )
 
 @Serializable
 data class ShortParagraphSpeakingDayDto(
     val title: String?,
     val list_paragraphs: List<ShortParagraphDto>
-){
+)
 
-}
 @Serializable
 data class CreateSpeakingDayRequest(
     val courseId: Long,

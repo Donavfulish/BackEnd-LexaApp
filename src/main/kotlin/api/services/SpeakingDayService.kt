@@ -13,7 +13,7 @@ import com.lexa.api.config.DatabaseFactory.dbQuery
 class SpeakingDayService (
     private val speakingDayRepository: SpeakingDayRepository
 ) {
-    suspend fun getParagraphSpeakingDay(speakingDayId: Long): List<ShortParagraphSpeakingDayDto> {
+    suspend fun getParagraphSpeakingDay(speakingDayId: Long): ShortParagraphSpeakingDayDto? {
         return speakingDayRepository.getParagraphSpeakingDay(speakingDayId)
     }
 

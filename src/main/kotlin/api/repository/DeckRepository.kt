@@ -77,9 +77,9 @@ class DeckRepository {
         }.insertedCount > 0
     }
 
-    suspend fun updateDeckResult(request: UpdateDeckResultRequest): Boolean = dbQuery {
+    suspend fun updateDeckResult(request: UpdateDeckResultRequest, userId: Int): Boolean = dbQuery {
         DeckResultsTable.update({
-            (DeckResultsTable.deckId eq request.deckId) and (DeckResultsTable.userId eq request.userId)}){
+            (DeckResultsTable.deckId eq request.deckId) and (DeckResultsTable.userId eq userId)}){
             it[rememberedCount] = request.rememberedCount
             it[forgottenCount] = request.forgottenCount
         } > 0
@@ -98,6 +98,7 @@ class DeckRepository {
             }
             .singleOrNull()
     }
+
     suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> = dbQuery {
 
         UserFavoriteDecksTable
@@ -153,6 +154,7 @@ class DeckRepository {
                 )
             }
     }
+    
     suspend fun getAllDecks(userId: Int?): List<DeckDto> = dbQuery {
         val vocabCountExpr = wrapAsExpression<Long>(
             FlashcardsTable
@@ -178,11 +180,14 @@ class DeckRepository {
             DeckDto(
                 id = row[FlashcardDecksTable.id].value,
                 title = row[FlashcardDecksTable.title],
-                topic = TopicDto(
-                    id = row[TopicsTable.id].value,
-                    name = row[TopicsTable.name] ?: "",
-                    colorHex = row[TopicsTable.color] ?: "#FFFFFF",
-                ),
+                topic = row.getOrNull(TopicsTable.id)?.let { topicId ->
+                    TopicDto(
+                        id = topicId.value,
+                        // Lưu ý: Cũng nên dùng getOrNull cho các cột khác của bảng right
+                        name = row.getOrNull(TopicsTable.name) ?: "",
+                        colorHex = row.getOrNull(TopicsTable.color) ?: "#FFFFFF",
+                    )
+                },
                 vocabNumber = row[vocabCountExpr]?.toInt() ?: 0,
                 createdAt = convertTime(row[FlashcardDecksTable.createdAt])
             )

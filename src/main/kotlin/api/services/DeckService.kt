@@ -42,9 +42,9 @@ class DeckService(
 
     suspend fun updateDeckResult(userId: Int, request: UpdateDeckResultRequest): Result<Boolean>{
         return try {
-            if(userId != request.userId){
-                return Result.failure(Exception("Không phải chủ bộ từ vựng"))            }
-            val bool = deckRepository.updateDeckResult(request)
+            if(userId == null){
+                return Result.failure(Exception("Không hợp lệ"))            }
+            val bool = deckRepository.updateDeckResult(request, userId)
             Result.success(bool)
         } catch (e: Exception){
             Result.failure(e)

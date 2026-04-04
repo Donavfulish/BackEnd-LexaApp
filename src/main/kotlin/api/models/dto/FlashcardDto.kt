@@ -1,5 +1,6 @@
 package api.models.dto
 
+import api.models.enum.ProgressStatus
 import io.ktor.http.Url
 import kotlinx.serialization.Serializable
 
@@ -17,16 +18,23 @@ data class DetailFlashcard(
     val partOfSpeech: String
 )
 
+
+@Serializable
+data class DetailFlashcardWithResult (
+    val flashCard: DetailFlashcard,
+    val result: ProgressStatus,
+)
+
 @Serializable
 data class CreateFlashcardRequest(
     val word: String,
     val transcription: String,
     val typeId: Int,
     val deckId: Long,
-    val imageUrl: String?,
-    val audioUrl: String?,
+    val imageUrl: String? = null,
+    val audioUrl: String? = null,
     val meaning: String,
-    val example: String?,
+    val example: String? = null,
     val partOfSpeechId: Int
 )
 
@@ -41,4 +49,17 @@ data class UpdateFlashcardRequest(
     val meaning: String? = null,
     val example: String? = null,
     val partOfSpeechId: Int? = null
+)
+
+
+@Serializable
+data class FlashcardResultItem(
+    val flashcardId: Long,
+    val status: ProgressStatus? = null
+)
+
+@Serializable
+data class UpdateFlashcardResultRequest(
+    val deckId: Long,
+    val results: List<FlashcardResultItem>
 )

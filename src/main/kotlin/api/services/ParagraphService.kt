@@ -5,6 +5,7 @@ import api.models.dto.ParagraphResponseDto
 import api.models.dto.ParagraphResultResponseDto
 import api.models.dto.UpdateParagraphRequest
 import api.models.dto.UpdateParagraphResultRequest
+import api.models.enum.UserRole
 import api.repository.ParagraphRepository
 
 class ParagraphService(
@@ -12,8 +13,8 @@ class ParagraphService(
 ) {
 
     suspend fun createParagraph(request: CreateParagraphRequest, userRole: String?): Result<ParagraphResponseDto> {
-        // 1. Validate Role
-        if (userRole != "teacher") {
+        // 1. Validate Role (Sử dụng Enum để an toàn)
+        if (userRole != UserRole.TEACHER.name) {
             return Result.failure(Exception("FORBIDDEN_ROLE"))
         }
 
@@ -41,7 +42,7 @@ class ParagraphService(
         request: UpdateParagraphRequest,
         userRole: String?
     ): Result<ParagraphResponseDto> {
-        if (userRole != "teacher") {
+        if (userRole != UserRole.TEACHER.name) {
             return Result.failure(Exception("FORBIDDEN_ROLE"))
         }
 
@@ -65,7 +66,7 @@ class ParagraphService(
         paragraphId: Long,
         userRole: String?
     ): Result<Unit> {
-        if (userRole != "teacher") {
+        if (userRole != UserRole.TEACHER.name) {
             return Result.failure(Exception("FORBIDDEN_ROLE"))
         }
 

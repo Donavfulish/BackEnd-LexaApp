@@ -204,7 +204,7 @@ class CoursesRepository {
             studying_user_count = studyingUserCount,
             favorite_user_count = favoriteUserCount,
             description = row[CoursesTable.description],
-            deckId = row[CoursesTable.deckId]!!.value,
+            deckId = row[CoursesTable.deckId]?.value ?: null,
             list_speaking_day = list_speaking_day,
             list_topic = list_topic
         )

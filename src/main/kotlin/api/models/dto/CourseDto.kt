@@ -59,7 +59,7 @@ data class SpeakingCourseDetailDto(
     val studying_user_count: Int,
     val favorite_user_count: Int,
     val description: String?,
-    val deckId: Long,
+    val deckId: Long?,
     val list_speaking_day: List<ShortSpeakingDayDto>,
     val list_topic: List<TopicDto>
 )

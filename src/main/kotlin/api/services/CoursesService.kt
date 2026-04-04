@@ -1,18 +1,15 @@
 package api.services
 
-import api.models.dto.ShortCourseDto
-import api.models.dto.CreateCourseRequest
-import api.models.dto.EditCourseRequest
-import api.models.dto.GetFeaturedCourseResponse
-import api.models.dto.GetStudyingCourseResponse
-import api.models.dto.SpeakingCourseDetailDto
+import api.models.dto.*
 import api.repository.CoursesRepository
 
 // Nơi xử lí logic nghiệp vụ, cầu nối giữa route và repo, tương tự controller
 class CoursesService (
     private val courseRepository: CoursesRepository
 ) {
-
+    suspend fun getTopics(): List<TopicDto> {
+        return courseRepository.getTopics()
+    }
 
     suspend fun getFeaturedCourses(userId: Int): List<GetFeaturedCourseResponse> {
         return courseRepository.getFeaturedCourses(userId)
@@ -38,8 +35,6 @@ class CoursesService (
     suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> {
         return courseRepository.getFavoriteCourses(userId)
     }
-
-
 
     suspend fun addCourse(userId: Int, course: CreateCourseRequest) : Result<Long> {
         if (course.title.isBlank()) {

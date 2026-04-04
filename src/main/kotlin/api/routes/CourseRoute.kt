@@ -13,6 +13,14 @@ import io.ktor.server.routing.*
 
 fun Route.courseRoutes(service: CoursesService) {
 
+    // ===== PUBLIC (NO AUTH REQUIRED FOR SOME) =====
+    route("/api/topics") {
+        get {
+            val data = service.getTopics()
+            call.respond(HttpStatusCode.OK, successResponse(data, "Danh sách chủ đề"))
+        }
+    }
+
     // ===== PUBLIC (BUT NEED AUTH USER CONTEXT) =====
     secureRoute("/api/courses") {
 

@@ -59,7 +59,8 @@ data class SpeakingCourseDetailDto(
     val favorite_user_count: Int,
     val description: String?,
     val deckId: Long,
-    val list_speaking_day: List<ShortSpeakingDayDto>
+    val list_speaking_day: List<ShortSpeakingDayDto>,
+    val list_topic: List<TopicDto>
 )
 
 
@@ -72,7 +73,7 @@ data class CreateCourseRequest(
     val description: String? = null,
     val privacy: String,
     val deckId: Long?,
-    val thumbnailUrl: String?
+    val thumbnailUrl: String? = null
 )
 @Serializable
 data class EditCourseRequest(
@@ -80,5 +81,5 @@ data class EditCourseRequest(
     val title: String,
     val description: String? = null,
     val privacy: String,
-    val thumbnailUrl: String?
+    val thumbnailUrl: String? = null
 )

@@ -31,6 +31,18 @@ import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.select
 // Nơi giao tiếp trực tiếp với database (nơi này sẽ được sử dụng models và dto)
 class CoursesRepository {
+    suspend fun getTopics(): List<TopicDto> = dbQuery {
+        TopicsTable
+            .selectAll()
+            .map{
+                row ->
+                TopicDto(
+                    id = row[TopicsTable.id].value,
+                    name = row[TopicsTable.name] ?: "",
+                    colorHex = row[TopicsTable.color] ?: "#000000"
+                )
+            }
+    }
     suspend fun getAllCourses(userId: Int): List<ShortCourseDto> = dbQuery {
 
         CoursesTable
@@ -160,7 +172,18 @@ class CoursesRepository {
 
                 ShortSpeakingDayDto(
                     title = dayRow[SpeakingDaysTable.title] ?: "",
-                    completed = completed
+                    completed = completed,
+                    paragraphNum = totalParas.toInt()
+                )
+            }
+
+        val list_topic = TopicsTable
+            .selectAll()
+            .map {row ->
+                TopicDto(
+                    id = row[TopicsTable.id].value,
+                    name = row[TopicsTable.name] ?: "",
+                    colorHex = row[TopicsTable.color] ?: "#000000"
                 )
             }
 
@@ -180,7 +203,8 @@ class CoursesRepository {
             favorite_user_count = favoriteUserCount,
             description = row[CoursesTable.description],
             deckId = row[CoursesTable.deckId]!!.value,
-            list_speaking_day = list_speaking_day
+            list_speaking_day = list_speaking_day,
+            list_topic = list_topic
         )
     }
     suspend fun getFeaturedCourses(userId: Int): List<GetFeaturedCourseResponse> = dbQuery {

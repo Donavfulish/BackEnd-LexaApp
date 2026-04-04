@@ -193,6 +193,7 @@ class CoursesRepository {
             id = courseIdEntity.value,
             thumbnail_url = row[CoursesTable.thumbnailUrl],
             creator = CreatorDto(
+                id = row[UsersTable.id].value,
                 name = row[UsersTable.name],
                 image = row[UsersTable.avatarUrl]
             ),

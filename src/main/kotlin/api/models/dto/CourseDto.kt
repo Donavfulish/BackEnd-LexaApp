@@ -42,6 +42,7 @@ data class GetStudyingCourseResponse(
 
 @Serializable
 data class CreatorDto(
+    val id: Int,
     val name: String,
     val image: String?
 )

@@ -8,6 +8,7 @@ import kotlinx.serialization.Serializable
 // DTO dùng để trả dữ liệu về (Response)
 @Serializable
 data class ShortSpeakingDayDto(
+    val speakingDayId: Long,
     val title: String,
     val completed: Int,
     val paragraphNum: Int

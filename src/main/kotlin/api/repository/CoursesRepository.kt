@@ -171,6 +171,7 @@ class CoursesRepository {
                 val completed = if (totalParas == 0L) 0 else ((doneParas * 100) / totalParas).toInt()
 
                 ShortSpeakingDayDto(
+                    speakingDayId = dayRow[SpeakingDaysTable.id].value,
                     title = dayRow[SpeakingDaysTable.title] ?: "",
                     completed = completed,
                     paragraphNum = totalParas.toInt()

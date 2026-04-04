@@ -25,8 +25,9 @@ data class CreateDeckRequest(
 @Serializable
 data class UpdateDeckRequest(
     val deckId: Long,
-    val title: String,
-    val privacy: String?
+    val title: String? = null,
+    val topicName: String? = null,
+    val privacy: String? = null
 )
 
 @Serializable

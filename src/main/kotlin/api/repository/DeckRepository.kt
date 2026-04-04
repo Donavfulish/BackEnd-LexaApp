@@ -40,9 +40,16 @@ class DeckRepository {
     }
 
     suspend fun updateDeck(userId: Int, request: UpdateDeckRequest): Boolean = dbQuery {
+        val targetTopicId = request.topicName?.let { name ->
+            TopicsTable.slice(TopicsTable.id)
+                .select { TopicsTable.name eq name }
+                .singleOrNull()?.get(TopicsTable.id)
+        }
+
         FlashcardDecksTable.update({
             (FlashcardDecksTable.id eq request.deckId) and (FlashcardDecksTable.creatorId eq userId)}) {
             request.title?.let { t -> it[title] = t }
+            targetTopicId?.let { id -> it[topicId] = id }
             request.privacy?.let { p ->
                 it[privacy] = api.models.enum.PrivacyType.valueOf(p.uppercase()) 
             }

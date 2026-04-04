@@ -69,9 +69,9 @@ class DeckService(
     }
 
     suspend fun updateDeck(userId: Int, request: UpdateDeckRequest) : Result<Boolean>{
-        if (request.title.isNullOrEmpty()) {
-            return Result.failure(Exception("Tên bộ từ vựng không được để trống"))
-        }
+//        if (request.title.isNullOrEmpty()) {
+//            return Result.failure(Exception("Tên bộ từ vựng không được để trống"))
+//        }
         return try {
             val id = deckRepository.updateDeck(userId, request);
             Result.success(id)

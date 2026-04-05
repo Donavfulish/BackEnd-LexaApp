@@ -89,6 +89,10 @@ class AuthRepository {
         )
     }
 
+    suspend fun deleteRefreshToken(_userId: Int) = dbQuery {
+        RefreshTokensTable.deleteWhere { RefreshTokensTable.userId eq _userId }
+    }
+
     suspend fun storeRefreshToken(_userId: Int, _refreshToken: String) = dbQuery {
         // Xóa token cũ của user này (nếu muốn mỗi user chỉ có 1 phiên đăng nhập)
         RefreshTokensTable.deleteWhere { userId eq _userId }

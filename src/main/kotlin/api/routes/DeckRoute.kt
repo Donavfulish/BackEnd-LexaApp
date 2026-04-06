@@ -31,7 +31,7 @@ fun Route.deckRoutes(service: DeckService) {
                 onSuccess = {
                     call.respond(
                         HttpStatusCode.Created,
-                        successResponse(mapOf("id" to it), "Tạo bộ từ vựng thành công")
+                        successResponse(it, "Tạo bộ từ vựng thành công")
                     )
                 },
                 onError = {

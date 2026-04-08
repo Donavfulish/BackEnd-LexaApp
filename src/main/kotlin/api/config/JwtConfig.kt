@@ -27,6 +27,7 @@ object JwtConfig {
     fun generateAccessToken(userInfo: UserInfo): String = JWT.create()
         .withSubject(userInfo.toString())
         .withIssuer(dotenv["JWT_ISSUER"])
+        .withClaim("email", userInfo.email)
         .withClaim("id", userInfo.id)
         .withClaim("role", userInfo.role.toString())
         .withClaim("type", "access")
@@ -36,6 +37,7 @@ object JwtConfig {
     fun generateGoogleAccessToken(oauthUser: OAuthUserInfo): String = JWT.create()
         .withSubject(oauthUser.toString())
         .withIssuer(dotenv["JWT_ISSUER"])
+        .withClaim("email", oauthUser.email)
         .withClaim("provider", oauthUser.provider.toString())
         .withClaim("sub", oauthUser.sub)
         .withClaim("type", "oauth-access")
@@ -54,6 +56,11 @@ object JwtConfig {
 fun ApplicationCall.getUserId(): Int? {
     val principal = this.principal<JWTPrincipal>()
     return principal?.payload?.getClaim("id")?.asInt()
+}
+
+fun ApplicationCall.getUserEmail(): String? {
+    val principal = this.principal<JWTPrincipal>()
+    return principal?.payload?.getClaim("email")?.asString()
 }
 
 fun ApplicationCall.getUserRole(): String? {

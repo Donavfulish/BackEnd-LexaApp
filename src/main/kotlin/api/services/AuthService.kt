@@ -81,6 +81,11 @@ class AuthService (
         return authRepository.findById(id)
     }
 
+    suspend fun getUserByEmail(email: String?): UserInfo? {
+        if (email.isNullOrEmpty()) return null
+        return authRepository.findByEmail(email)
+    }
+
     suspend fun logout(id: Int) {
         authRepository.deleteRefreshToken(id)
     }
@@ -157,8 +162,8 @@ class AuthService (
         return authRepository.isOAuthUserExisted(sub, provider)
     }
 
-    suspend fun checkOAuth(sub: String, provider: ProviderType): AuthResult {
-        val user = authRepository.getUserFromOAuth(sub, provider)
+    suspend fun checkOAuth(sub: String, email: String?, provider: ProviderType): AuthResult {
+        val user = authRepository.getUserFromOAuth(sub, email, provider)
 
         if (user == null) return AuthResult(
             ok = false,
@@ -182,7 +187,7 @@ class AuthService (
 
     suspend fun signupOAuth(registerRequest: OAuthRegisterRequest, oauthSub: String): AuthResult {
         println("sub: $oauthSub, provider: ${registerRequest.provider.toString()}")
-        val existedUser = authRepository.getUserFromOAuth(oauthSub, registerRequest.provider)
+        val existedUser = authRepository.getUserFromOAuth(oauthSub, registerRequest.email, registerRequest.provider)
 
         if (existedUser != null) return AuthResult(
             ok = false,

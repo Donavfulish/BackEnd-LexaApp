@@ -21,6 +21,8 @@ import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.innerJoin
+import org.jetbrains.exposed.sql.or
+import org.jetbrains.exposed.sql.rightJoin
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.jetbrains.exposed.sql.update
@@ -184,13 +186,16 @@ class AuthRepository {
         }
     }
 
-    suspend fun getUserFromOAuth(sub: String, provider: ProviderType): UserInfo? = dbQuery {
+    suspend fun getUserFromOAuth(sub: String, email: String?, provider: ProviderType): UserInfo? = dbQuery {
+        var condition = (AuthProviderTable.provider eq provider) and (AuthProviderTable.providerUserId eq sub)
+
+        if (!email.isNullOrBlank()) {
+            condition = condition or (UsersTable.email eq email)
+        }
+
         AuthProviderTable
-            .innerJoin(UsersTable)
-            .select {
-                (AuthProviderTable.provider eq provider) and
-                        (AuthProviderTable.providerUserId eq sub)
-            }
+            .rightJoin(UsersTable)
+            .select(condition)
             .map { row ->
                 UserInfo(
                     id = row[UsersTable.id].value,

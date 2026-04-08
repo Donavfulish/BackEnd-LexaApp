@@ -2,6 +2,7 @@ package api.routes
 
 import api.config.JwtConfig
 import api.config.getOAuthSub
+import api.config.getUserEmail
 import api.config.getUserId
 import api.config.getUserRole
 import api.models.dto.CreateCourseRequest
@@ -231,7 +232,8 @@ fun Route.authRoutes(authService: AuthService) {
                 picture = googleUserInfo.picture
             )
 
-            val isAccountRegistered = authService.isOAuthUserExisted(googleUserInfo.sub ?: "", ProviderType.GOOGLE)
+            val isAccountRegistered: Boolean = authService.isOAuthUserExisted(googleUserInfo.sub ?: "", ProviderType.GOOGLE)
+            val isAccountWithOAuthEmail: Boolean = authService.getUserByEmail(googleUserInfo.email) != null
 
             val googleAccessToken = JwtConfig.generateGoogleAccessToken(oauthUserInfo)
 
@@ -245,7 +247,7 @@ fun Route.authRoutes(authService: AuthService) {
                 parameters.append("token", googleAccessToken)
                 parameters.append("email", oauthUserInfo.email)
                 parameters.append("name", oauthUserInfo.name)
-                parameters.append("registered", isAccountRegistered.toString())
+                parameters.append("registered", (isAccountRegistered || isAccountWithOAuthEmail).toString())
                 oauthUserInfo.picture?.let { parameters.append("avatar", it) }
             }.buildString()
 
@@ -258,17 +260,18 @@ fun Route.authRoutes(authService: AuthService) {
         authenticate("auth-jwt-oauth") {
             get("/check") {
                 val googleSub = call.getOAuthSub()
+                val googleEmail = call.getUserEmail()
 
                 if (googleSub == null) { call.respond(HttpStatusCode.Unauthorized, mapOf("sub" to googleSub)) }
 
-                val result = authService.checkOAuth(googleSub!!, ProviderType.GOOGLE)
+                val result = authService.checkOAuth(googleSub!!, googleEmail, ProviderType.GOOGLE)
 
                 if (result.ok) {
                     call.respond(HttpStatusCode.OK, successResponse(result, result.message ?: "Thành công"))
                 } else {
                     // Trả về 401 để Frontend biết đường đá người dùng ra màn Login
                     call.respond(
-                        HttpStatusCode.Unauthorized, successResponse(result, result.message?: "Thất bại")
+                        HttpStatusCode.BadRequest, successResponse(result, result.message?: "Thất bại")
                     )
                 }
             }

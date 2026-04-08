@@ -1,14 +1,17 @@
 package api.repository
 
+import api.models.dto.AllCoursePaginationResponse
 import api.models.dto.ShortCourseDto
 import api.models.dto.CreateCourseRequest
 import api.models.dto.CreatorDto
 import api.models.dto.EditCourseRequest
 import api.models.dto.GetFeaturedCourseResponse
 import api.models.dto.GetStudyingCourseResponse
+import api.models.dto.SearchInfo
 import api.models.dto.ShortSpeakingDayDto
 import api.models.dto.SpeakingCourseDetailDto
 import api.models.dto.TopicDto
+import api.models.enum.OrderBy
 import api.models.tables.CoursesTable
 import api.models.tables.UsersTable
 import api.models.tables.TopicsTable
@@ -17,9 +20,8 @@ import api.models.tables.SpeakingParagraphResultsTable
 import api.models.tables.SpeakingParagraphsTable
 import api.models.tables.SpeakingDaysTable
 import api.models.enum.PrivacyType
-import api.models.tables.FlashcardDecksTable
+import api.models.enum.SortBy
 import api.models.tables.FlashcardsTable
-import api.models.tables.UserFavoriteDecksTable
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
@@ -28,7 +30,6 @@ import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import kotlin.collections.map
 import org.jetbrains.exposed.sql.and
-import org.jetbrains.exposed.sql.select
 // Nơi giao tiếp trực tiếp với database (nơi này sẽ được sử dụng models và dto)
 class CoursesRepository {
     suspend fun getTopics(): List<TopicDto> = dbQuery {
@@ -43,12 +44,73 @@ class CoursesRepository {
                 )
             }
     }
-    suspend fun getAllCourses(userId: Int): List<ShortCourseDto> = dbQuery {
+    suspend fun getAllCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse = dbQuery {
+        val query = searchInfo.query ?: ""
+        val sortBy = SortBy.fromString(searchInfo.sortBy)
+        val orderBy = OrderBy.fromString(searchInfo.order)
+        val limit = searchInfo.limit ?: 10
+        val lastId = nextCursor
 
-        CoursesTable
+
+        val sortColumn = when(sortBy){
+            SortBy.CREATED -> CoursesTable.createdAt
+            SortBy.TITLE -> CoursesTable.title
+        }
+        val lastValue = if(lastId != null){
+            CoursesTable
+                .slice(sortColumn)
+                .select { CoursesTable.id eq lastId }
+                .singleOrNull()
+                ?.get(sortColumn)
+                ?.toString()
+        } else null
+
+        val sortOrder = if(orderBy == OrderBy.ASC) SortOrder.ASC else SortOrder.DESC
+        val baseQuery= CoursesTable
             .innerJoin(UsersTable)
             .leftJoin(TopicsTable)
             .select { CoursesTable.privacy eq PrivacyType.PUBLIC }
+        if(!query.isNullOrEmpty()){
+            val lowerQuery = "%${query.lowercase()}%"
+            baseQuery.andWhere {
+                (CoursesTable.title.lowerCase() like lowerQuery) or
+                        (CoursesTable.description.lowerCase() like lowerQuery)
+            }        }
+        val totalCount = baseQuery.count()
+
+        if (lastId != null && lastValue != null){
+            baseQuery.andWhere {
+                if(sortOrder == SortOrder.DESC){
+                    when(sortBy){
+                        SortBy.CREATED -> {
+                            val lastTime = java.time.LocalDateTime.parse(lastValue)
+                            (CoursesTable.createdAt less lastTime) or
+                                    ((CoursesTable.createdAt eq lastTime) and (CoursesTable.id less lastId))
+                        }
+                        SortBy.TITLE -> {
+                            (CoursesTable.title less lastValue) or
+                                    ((CoursesTable.title eq lastValue) and (CoursesTable.id less lastId))
+                        }
+                    }
+                } else {
+                    when(sortBy){
+                        SortBy.CREATED -> {
+                            val lastTime = java.time.LocalDateTime.parse(lastValue)
+                            (CoursesTable.createdAt greater lastTime) or
+                                    ((CoursesTable.createdAt eq lastTime) and (CoursesTable.id greater lastId))
+                        }
+                        SortBy.TITLE -> {
+                            (CoursesTable.title greater lastValue) or
+                                    ((CoursesTable.title eq lastValue) and (CoursesTable.id greater lastId))
+                        }
+                    }
+                }
+            }
+        }
+
+        val results = baseQuery
+            .orderBy(sortColumn, sortOrder)
+            .limit(limit)
             .map { row ->
 
                 val courseId = row[CoursesTable.id]
@@ -102,9 +164,24 @@ class CoursesRepository {
                     is_favorite = isFavorite,
                     vocabNumber = vocabNumber.toInt(),
                     studying_user_count = studyingUserCount,
-                    favorite_user_count = favoriteUserCount
+                    favorite_user_count = favoriteUserCount,
+                    created_at = row[CoursesTable.createdAt].toString()
                 )
             }
+
+
+        val lastItem = results.lastOrNull()
+        val nextCursorRes = if(results.size == limit && lastItem != null){
+            lastItem.id
+        } else {
+            null
+        }
+        AllCoursePaginationResponse(
+            data = results,
+            searchInfo = searchInfo,
+            nextCursor = nextCursorRes,
+            totalItem = totalCount
+        )
     }
     suspend fun getSpeakingDayCourse(userId: Int, courseId: Long): SpeakingCourseDetailDto? = dbQuery {
 
@@ -456,7 +533,8 @@ class CoursesRepository {
                     is_favorite = isFavorite,
                     vocabNumber = vocabNumber.toInt(),
                     studying_user_count = studyingUserCount,
-                    favorite_user_count = favoriteUserCount
+                    favorite_user_count = favoriteUserCount,
+                    created_at = row[CoursesTable.createdAt].toString()
                 )
             }
             .sortedByDescending { it.favorite_user_count }
@@ -510,7 +588,8 @@ class CoursesRepository {
                     is_favorite = isFavorite,
                     vocabNumber = vocabNumber,
                     studying_user_count = studyingUserCount,
-                    favorite_user_count = favoriteUserCount
+                    favorite_user_count = favoriteUserCount,
+                    created_at = row[CoursesTable.createdAt].toString()
                 )
             }
     }
@@ -523,7 +602,6 @@ class CoursesRepository {
             it[title] = course.title
             it[description] = course.description
             it[privacy] = api.models.enum.PrivacyType.valueOf(course.privacy)
-            it[deckId] = course.deckId
             it[thumbnailUrl] = course.thumbnailUrl
             it[creatorId] = userId
 

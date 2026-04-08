@@ -157,7 +157,8 @@ class DeckRepository {
                     is_favorite = isFavorite,
                     vocabNumber = vocabNumber.toInt(),
                     studying_user_count = studyingUserCount,
-                    favorite_user_count = favoriteUserCount
+                    favorite_user_count = favoriteUserCount,
+                    created_at = row[CoursesTable.createdAt].toString()
                 )
             }
     }

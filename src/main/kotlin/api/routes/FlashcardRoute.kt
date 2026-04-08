@@ -31,7 +31,7 @@ fun Route.flashcardRoutes(service: FlashcardService) {
                 onSuccess = {
                     call.respond(
                         HttpStatusCode.Created,
-                        successResponse(mapOf("id" to it), "Thêm flashcard thành công")
+                        successResponse(it, "Thêm flashcard thành công")
                     )
                 },
                 onError = {

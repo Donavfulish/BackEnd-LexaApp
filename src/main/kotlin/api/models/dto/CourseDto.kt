@@ -17,7 +17,8 @@ data class ShortCourseDto(
     val vocabNumber: Int,
     val studying_user_count: Int,
     val favorite_user_count: Int,
-    val completed: Int? = null
+    val completed: Int? = null,
+    val created_at: String
 )
 @Serializable
 data class GetFeaturedCourseResponse(
@@ -73,7 +74,6 @@ data class CreateCourseRequest(
     val title: String,
     val description: String? = null,
     val privacy: String,
-    val deckId: Long?,
     val thumbnailUrl: String? = null
 )
 @Serializable
@@ -83,4 +83,20 @@ data class EditCourseRequest(
     val description: String? = null,
     val privacy: String,
     val thumbnailUrl: String? = null
+)
+
+// Pagination, sort, query and filter.
+@Serializable
+data class AllCoursePaginationResponse(
+    val data: List<ShortCourseDto>,
+    val searchInfo: SearchInfo,
+    val nextCursor: Long?= null,
+    val totalItem: Long)
+
+@Serializable
+data class SearchInfo(
+    val query: String ?= null,
+    val sortBy: String ?= null,
+    val order: String ?= null,
+    val limit: Int ?= null
 )

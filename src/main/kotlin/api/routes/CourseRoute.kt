@@ -45,9 +45,19 @@ fun Route.courseRoutes(service: CoursesService) {
             call.respond(HttpStatusCode.OK, successResponse(data, "Top khóa học"))
         }
 
-        get {
+        get("") {
             val userId = call.getUserIdOrRespond() ?: return@get
-            val data = service.getAllCourses(userId)
+            val queryParams = call.request.queryParameters
+
+            val searchInfo = SearchInfo(
+                query = queryParams["query"] ?: "",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "created",
+                order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
+                limit = queryParams["limit"]?.toIntOrNull() ?: 10
+            )
+            val nextCursor = queryParams["next_id"]?.toLongOrNull()
+
+            val data = service.getAllCourses(userId, searchInfo, nextCursor)
 
             call.respond(HttpStatusCode.OK, successResponse(data, "Tất cả khóa học"))
         }

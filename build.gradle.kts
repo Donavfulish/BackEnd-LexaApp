@@ -66,4 +66,7 @@ dependencies {
 
     // Đảm bảo bạn cũng có core client nếu chưa có
     implementation("io.ktor:ktor-client-core:${ktor_version}")
+
+    // Cloudinary lưu trữ ảnh
+    implementation("com.cloudinary:cloudinary-http5:2.0.0")
 }

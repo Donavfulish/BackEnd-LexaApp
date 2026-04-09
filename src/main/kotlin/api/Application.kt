@@ -8,6 +8,7 @@ import io.ktor.server.netty.EngineMain
 import com.lexa.api.config.DatabaseFactory
 import com.lexa.api.plugins.applicationHttpClient
 import com.lexa.api.plugins.configureMonitoring
+import io.github.cdimascio.dotenv.dotenv
 
 
 // Mở cmd chạy lệnh dưới sau khi chạy Frontend + Backend

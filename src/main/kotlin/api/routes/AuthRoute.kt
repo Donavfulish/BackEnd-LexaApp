@@ -16,9 +16,11 @@ import api.models.dto.OtpVerify
 import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
 import api.models.dto.successResponse
+import api.models.enum.CloudinaryFolder
 import api.models.enum.ProviderType
 import api.models.enum.UserRole
 import api.services.AuthService
+import api.services.CloudinaryService
 import com.lexa.api.plugins.applicationHttpClient
 import com.lexa.api.plugins.redirects
 import api.services.CoursesService
@@ -106,15 +108,13 @@ fun Route.authRoutes(authService: AuthService) {
 
             // Cập nhật đường dẫn file của payload thành đường dẫn được lưu trên Server
             languageCertBytes?.let { bytes ->
-                val fileName = FileUtil.generateUniqueFileName("languageCert", "image.jpg")
-                val savedPath = FileUtil.saveFileToDisk(bytes, fileName)
+                val savedPath = CloudinaryService.uploadImage(bytes, CloudinaryFolder.CERTIFICATES.path)
                 signupRequest!!.english_certificate_url = savedPath
             }
 
             pedagogyCertBytes?.let { bytes ->
-                val fileName = FileUtil.generateUniqueFileName("pedagogyCert", "image.jpg")
-                val savedPath = FileUtil.saveFileToDisk(bytes, fileName)
-                signupRequest!!.pedagogical_certificate_url = savedPath
+                val savedPath = CloudinaryService.uploadImage(bytes, CloudinaryFolder.CERTIFICATES.path)
+                signupRequest!!.english_certificate_url = savedPath
             }
 
             val result = authService.signup(signupRequest!!)
@@ -313,15 +313,13 @@ fun Route.authRoutes(authService: AuthService) {
 
                 // Cập nhật đường dẫn file của payload thành đường dẫn được lưu trên Server
                 languageCertBytes?.let { bytes ->
-                    val fileName = FileUtil.generateUniqueFileName("languageCert", "image.jpg")
-                    val savedPath = FileUtil.saveFileToDisk(bytes, fileName)
+                    val savedPath = CloudinaryService.uploadImage(bytes, CloudinaryFolder.CERTIFICATES.path)
                     registerRequest!!.english_certificate_url = savedPath
                 }
 
                 pedagogyCertBytes?.let { bytes ->
-                    val fileName = FileUtil.generateUniqueFileName("pedagogyCert", "image.jpg")
-                    val savedPath = FileUtil.saveFileToDisk(bytes, fileName)
-                    registerRequest!!.pedagogical_certificate_url = savedPath
+                    val savedPath = CloudinaryService.uploadImage(bytes, CloudinaryFolder.CERTIFICATES.path)
+                    registerRequest!!.english_certificate_url = savedPath
                 }
 
                 val result = authService.signupOAuth(registerRequest!!, googleSub!!)

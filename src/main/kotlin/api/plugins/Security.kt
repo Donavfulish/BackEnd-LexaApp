@@ -25,8 +25,6 @@ import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import java.util.concurrent.ConcurrentHashMap
 
-val dotenv = dotenv()
-
 val redirects = ConcurrentHashMap<String, String>()
 
 @Serializable

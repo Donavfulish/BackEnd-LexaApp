@@ -87,6 +87,11 @@ data class EditCourseRequest(
 
 // Pagination, sort, query and filter.
 @Serializable
+data class SearchResponse(
+    val id: Long,
+    val score: Float
+)
+@Serializable
 data class AllCoursePaginationResponse(
     val data: List<ShortCourseDto>,
     val searchInfo: SearchInfo,

@@ -51,7 +51,7 @@ fun Route.courseRoutes(service: CoursesService) {
 
             val searchInfo = SearchInfo(
                 query = queryParams["query"] ?: "",
-                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "created",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
                 order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
                 limit = queryParams["limit"]?.toIntOrNull() ?: 10
             )

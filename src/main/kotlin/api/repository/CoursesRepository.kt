@@ -22,14 +22,17 @@ import api.models.tables.SpeakingDaysTable
 import api.models.enum.PrivacyType
 import api.models.enum.SortBy
 import api.models.tables.FlashcardsTable
+import api.models.tables.SearchEngine
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.selectAll
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
+
 import kotlin.collections.map
 import org.jetbrains.exposed.sql.and
+
 // Nơi giao tiếp trực tiếp với database (nơi này sẽ được sử dụng models và dto)
 class CoursesRepository {
     suspend fun getTopics(): List<TopicDto> = dbQuery {
@@ -44,19 +47,35 @@ class CoursesRepository {
                 )
             }
     }
-    suspend fun getAllCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse = dbQuery {
+
+
+    suspend fun getAllCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?, isOwner: Boolean = false): AllCoursePaginationResponse = dbQuery {
         val query = searchInfo.query ?: ""
         val sortBy = SortBy.fromString(searchInfo.sortBy)
         val orderBy = OrderBy.fromString(searchInfo.order)
         val limit = searchInfo.limit ?: 10
         val lastId = nextCursor
 
+        var isRevelant = false
+        if(searchInfo.sortBy.isNullOrEmpty() and !searchInfo.query.isNullOrEmpty()){
+            isRevelant = true
+        }
+        var queryList = if (query.isNotEmpty()){
+            if(isOwner){
+                SearchEngine.searchMyCourses(query, userId)
+            } else {
+                SearchEngine.searchAllCourses(query)
+            }
+        } else null
+        if(queryList != null && queryList.isEmpty()){
+            return@dbQuery AllCoursePaginationResponse(emptyList(), searchInfo, null, 0)
+        }
 
         val sortColumn = when(sortBy){
             SortBy.CREATED -> CoursesTable.createdAt
             SortBy.TITLE -> CoursesTable.title
         }
-        val lastValue = if(lastId != null){
+        val lastValue = if(lastId != null && queryList.isNullOrEmpty()){
             CoursesTable
                 .slice(sortColumn)
                 .select { CoursesTable.id eq lastId }
@@ -65,57 +84,75 @@ class CoursesRepository {
                 ?.toString()
         } else null
 
+        var totalCount = 0L
         val sortOrder = if(orderBy == OrderBy.ASC) SortOrder.ASC else SortOrder.DESC
         val baseQuery= CoursesTable
             .innerJoin(UsersTable)
             .leftJoin(TopicsTable)
             .select { CoursesTable.privacy eq PrivacyType.PUBLIC }
-        if(!query.isNullOrEmpty()){
-            val lowerQuery = "%${query.lowercase()}%"
-            baseQuery.andWhere {
-                (CoursesTable.title.lowerCase() like lowerQuery) or
-                        (CoursesTable.description.lowerCase() like lowerQuery)
-            }        }
-        val totalCount = baseQuery.count()
+        totalCount = baseQuery.count()
+
+        if(!queryList.isNullOrEmpty()){
+            totalCount = queryList.size.toLong()
+            if(lastId != null){
+                val startIndex = queryList.indexOfFirst { it.id == lastId }
+                queryList = queryList.subList(startIndex + 1, if(startIndex + 10 > queryList.size) queryList.size else startIndex + 11)
+            } else {
+                queryList = queryList.subList(0, if(10 > queryList.size) queryList.size else 10 )
+            }
+            baseQuery.andWhere { CoursesTable.id inList queryList.map { it.id } }
+        }
+
 
         if (lastId != null && lastValue != null){
-            baseQuery.andWhere {
-                if(sortOrder == SortOrder.DESC){
-                    when(sortBy){
-                        SortBy.CREATED -> {
-                            val lastTime = java.time.LocalDateTime.parse(lastValue)
-                            (CoursesTable.createdAt less lastTime) or
-                                    ((CoursesTable.createdAt eq lastTime) and (CoursesTable.id less lastId))
+            if(!isRevelant){
+                baseQuery.andWhere {
+                    if(sortOrder == SortOrder.DESC){
+                        when(sortBy){
+                            SortBy.CREATED -> {
+                                val lastTime = java.time.LocalDateTime.parse(lastValue)
+                                (CoursesTable.createdAt less lastTime) or
+                                        ((CoursesTable.createdAt eq lastTime) and (CoursesTable.id less lastId))
+                            }
+                            SortBy.TITLE -> {
+                                (CoursesTable.title less lastValue) or
+                                        ((CoursesTable.title eq lastValue) and (CoursesTable.id less lastId))
+                            }
                         }
-                        SortBy.TITLE -> {
-                            (CoursesTable.title less lastValue) or
-                                    ((CoursesTable.title eq lastValue) and (CoursesTable.id less lastId))
-                        }
-                    }
-                } else {
-                    when(sortBy){
-                        SortBy.CREATED -> {
-                            val lastTime = java.time.LocalDateTime.parse(lastValue)
-                            (CoursesTable.createdAt greater lastTime) or
-                                    ((CoursesTable.createdAt eq lastTime) and (CoursesTable.id greater lastId))
-                        }
-                        SortBy.TITLE -> {
-                            (CoursesTable.title greater lastValue) or
-                                    ((CoursesTable.title eq lastValue) and (CoursesTable.id greater lastId))
+                    } else {
+                        when(sortBy){
+                            SortBy.CREATED -> {
+                                val lastTime = java.time.LocalDateTime.parse(lastValue)
+                                (CoursesTable.createdAt greater lastTime) or
+                                        ((CoursesTable.createdAt eq lastTime) and (CoursesTable.id greater lastId))
+                            }
+                            SortBy.TITLE -> {
+                                (CoursesTable.title greater lastValue) or
+                                        ((CoursesTable.title eq lastValue) and (CoursesTable.id greater lastId))
+                            }
                         }
                     }
                 }
             }
         }
+        if(!isRevelant){
+            baseQuery
+                .orderBy(sortColumn, sortOrder)
+                .limit(limit)
+        }
+
+        val deckIds = baseQuery.limit(limit).mapNotNull { it[CoursesTable.deckId] }
+        val vocabCountsMap = FlashcardsTable
+            .slice(FlashcardsTable.deckId, FlashcardsTable.id.count())
+            .select { FlashcardsTable.deckId inList deckIds }
+            .groupBy(FlashcardsTable.deckId)
+            .associate { it[FlashcardsTable.deckId] to it[FlashcardsTable.id.count()] }
+
 
         val results = baseQuery
-            .orderBy(sortColumn, sortOrder)
             .limit(limit)
             .map { row ->
-
                 val courseId = row[CoursesTable.id]
-                val deckId = row[CoursesTable.deckId]
-
                 val isFavorite = UserFavoriteCoursesTable
                     .select {
                         (UserFavoriteCoursesTable.courseId eq courseId) and
@@ -138,12 +175,9 @@ class CoursesRepository {
                             ).toInt()
                 }
 
-                val vocabNumber = row[CoursesTable.deckId]?.let { dId ->
-                    FlashcardsTable.select { FlashcardsTable.deckId eq dId }.count()
-                } ?: 0L
+                val vocabNumber = vocabCountsMap[row[CoursesTable.deckId]] ?: 0L
 
                 val favoriteCountExpr = (UserFavoriteCoursesTable.userId.count())
-
                 val favoriteUserCount = (UserFavoriteCoursesTable
                     .slice(favoriteCountExpr)
                     .select { UserFavoriteCoursesTable.courseId eq courseId }
@@ -169,15 +203,21 @@ class CoursesRepository {
                 )
             }
 
+        val finalResults = if(isRevelant){
+            val idOrder = queryList!!.map { it.id }.withIndex().associate { it.value to it.index }
+            results.sortedBy { idOrder[it.id] }
+        } else {
+            results
+        }
 
-        val lastItem = results.lastOrNull()
-        val nextCursorRes = if(results.size == limit && lastItem != null){
+        val lastItem = finalResults.lastOrNull()
+        val nextCursorRes = if(finalResults.size == limit && lastItem != null){
             lastItem.id
         } else {
             null
         }
         AllCoursePaginationResponse(
-            data = results,
+            data = finalResults,
             searchInfo = searchInfo,
             nextCursor = nextCursorRes,
             totalItem = totalCount
@@ -473,8 +513,12 @@ class CoursesRepository {
                     progress = completed)
             }
     }
+    suspend fun getMyCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse = dbQuery {
+        getAllCourses(userId, searchInfo, nextCursor, true)
+    }
 
-    suspend fun getMyCourses(userId: Int): List<ShortCourseDto> = dbQuery {
+
+    suspend fun getMyCoursess(userId: Int): List<ShortCourseDto> = dbQuery {
 
         CoursesTable
             .innerJoin(UsersTable)

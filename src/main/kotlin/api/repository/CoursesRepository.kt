@@ -62,11 +62,13 @@ class CoursesRepository {
         }
         var queryList = if (query.isNotEmpty()){
             if(isOwner){
+                println("Hello")
                 SearchEngine.searchMyCourses(query, userId)
             } else {
                 SearchEngine.searchAllCourses(query)
             }
         } else null
+        println(queryList)
         if(queryList != null && queryList.isEmpty()){
             return@dbQuery AllCoursePaginationResponse(emptyList(), searchInfo, null, 0)
         }
@@ -86,10 +88,16 @@ class CoursesRepository {
 
         var totalCount = 0L
         val sortOrder = if(orderBy == OrderBy.ASC) SortOrder.ASC else SortOrder.DESC
-        val baseQuery= CoursesTable
+        val baseQuery = CoursesTable
             .innerJoin(UsersTable)
             .leftJoin(TopicsTable)
-            .select { CoursesTable.privacy eq PrivacyType.PUBLIC }
+            .select {
+                if (isOwner) {
+                    CoursesTable.creatorId eq userId
+                } else {
+                    CoursesTable.privacy eq PrivacyType.PUBLIC
+                }
+            }
         totalCount = baseQuery.count()
 
         if(!queryList.isNullOrEmpty()){

@@ -2,6 +2,7 @@ package api.models.tables
 
 import api.models.dto.SearchResponse
 import com.lexa.api.config.DatabaseFactory.dbQuery
+import org.jetbrains.exposed.sql.IntegerColumnType
 import org.jetbrains.exposed.sql.TextColumnType
 import org.jetbrains.exposed.sql.statements.StatementType
 import org.jetbrains.exposed.sql.transactions.TransactionManager
@@ -13,7 +14,7 @@ object SearchEngine {
             """
               WITH search AS (
               SELECT 
-                id, title, description,
+                id,
                 ts_rank(search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
                 similarity(f_unaccent(title), f_unaccent(?)) AS trigram_rank
               FROM courses
@@ -23,7 +24,7 @@ object SearchEngine {
                 OR f_unaccent(title) % f_unaccent(?)
                 OR f_unaccent(title) ILIKE f_unaccent(?)                    ))
   
-            SELECT id, title, description, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+            SELECT id, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
             FROM search
             ORDER BY final_score DESC
             """.trimIndent()
@@ -56,7 +57,7 @@ object SearchEngine {
             """
                 WITH search AS (
               SELECT 
-                id, title, description,
+                id,
                 ts_rank(search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
                 similarity(f_unaccent(title), f_unaccent(?)) AS trigram_rank
               FROM courses
@@ -67,7 +68,7 @@ object SearchEngine {
                 OR f_unaccent(title) % f_unaccent(?)
                 OR f_unaccent(title) ILIKE f_unaccent(?)                    ))
   
-            SELECT id, title, description, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+            SELECT id, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
             FROM search
             ORDER BY final_score DESC
             """.trimIndent()
@@ -76,7 +77,7 @@ object SearchEngine {
             args = listOf(
                 TextColumnType() to query,
                 TextColumnType() to query,
-                TextColumnType() to userId,
+                IntegerColumnType() to userId,
                 TextColumnType() to query,
                 TextColumnType() to query,
                 TextColumnType() to "%$query%"

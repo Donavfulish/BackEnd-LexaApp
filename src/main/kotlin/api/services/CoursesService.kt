@@ -32,8 +32,8 @@ class CoursesService (
     }
 
 
-    suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> {
-        return courseRepository.getFavoriteCourses(userId)
+    suspend fun getFavoriteCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse {
+        return courseRepository.getFavoriteCourses(userId, searchInfo, nextCursor)
     }
 
     suspend fun addCourse(userId: Int, course: CreateCourseRequest) : Result<Long> {

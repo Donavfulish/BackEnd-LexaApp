@@ -117,7 +117,16 @@ fun Route.courseRoutes(service: CoursesService) {
 
         get {
             val userId = call.getUserIdOrRespond() ?: return@get
-            val data = service.getFavoriteCourses(userId)
+            val queryParams = call.request.queryParameters
+
+            val searchInfo = SearchInfo(
+                query = queryParams["query"] ?: "",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
+                order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
+                limit = queryParams["limit"]?.toIntOrNull() ?: 10
+            )
+            val nextCursor = queryParams["next_id"]?.toLongOrNull()
+            val data = service.getFavoriteCourses(userId, searchInfo, nextCursor)
 
             call.respond(HttpStatusCode.OK, successResponse(data, "Danh sách yêu thích"))
         }

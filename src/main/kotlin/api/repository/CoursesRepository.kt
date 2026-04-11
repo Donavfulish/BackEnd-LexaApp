@@ -69,7 +69,8 @@ class CoursesRepository {
         nextCursor: Long?,
         baseQuery: Query,
         isOwner: Boolean = false,
-        isFavoriteList: Boolean = false
+        isFavoriteList: Boolean = false,
+        isLearningList: Boolean = false
     ): AllCoursePaginationResponse {
         val query = searchInfo.query ?: ""
         val sortBy = SortBy.fromString(searchInfo.sortBy)
@@ -85,6 +86,10 @@ class CoursesRepository {
         var queryList = if (query.isNotEmpty()) {
             if (isOwner) {
                 SearchEngine.searchMyCourses(query, userId)
+            } else if (isFavoriteList) {
+                SearchEngine.searchFavoriteCourses(query, userId)
+            } else if (isLearningList){
+                SearchEngine.searchLearningCourses(query, userId)
             } else {
                 SearchEngine.searchAllCourses(query)
             }
@@ -192,6 +197,23 @@ class CoursesRepository {
             .leftJoin(TopicsTable, { CoursesTable.topicId }, { TopicsTable.id })
             .select { (UserFavoriteCoursesTable.userId eq userId) and (CoursesTable.privacy eq PrivacyType.PUBLIC) }
         executeCoursePagination(userId, searchInfo, nextCursor, baseQuery, isFavoriteList = true)
+    }
+
+    suspend fun getLearningCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse = dbQuery {
+        val baseQuery = CoursesTable
+            .innerJoin(UsersTable, { CoursesTable.creatorId }, { UsersTable.id })
+            .leftJoin(TopicsTable, { CoursesTable.topicId }, { TopicsTable.id })
+            .select {
+                (CoursesTable.privacy eq PrivacyType.PUBLIC) and exists(
+                    SpeakingDaysTable
+                        .innerJoin(SpeakingParagraphsTable)
+                        .innerJoin(SpeakingParagraphResultsTable)
+                        .slice(intLiteral(1))
+                        .select { (SpeakingDaysTable.courseId eq  CoursesTable.id) and
+                                (SpeakingParagraphResultsTable.userId eq userId)}
+                )
+            }
+        executeCoursePagination(userId, searchInfo, nextCursor, baseQuery)
     }
 
 
@@ -499,61 +521,6 @@ class CoursesRepository {
                     progress = completed)
             }
     }
-
-//    suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> = dbQuery {
-//
-//        UserFavoriteCoursesTable
-//            .innerJoin(CoursesTable, { UserFavoriteCoursesTable.courseId }, { CoursesTable.id })
-//            .innerJoin(UsersTable, { CoursesTable.creatorId }, { UsersTable.id })
-//            .leftJoin(TopicsTable, { CoursesTable.topicId }, { TopicsTable.id })
-//            .select {
-//                (UserFavoriteCoursesTable.userId eq userId) and
-//                        (CoursesTable.privacy eq PrivacyType.PUBLIC)
-//            }
-//            .map { row ->
-//                val courseId = row[CoursesTable.id]
-//                val isFavorite = true
-//
-//                val studyingUserCount = SpeakingParagraphResultsTable
-//                    .innerJoin(SpeakingParagraphsTable)
-//                    .innerJoin(SpeakingDaysTable)
-//                    .slice(SpeakingParagraphResultsTable.userId.countDistinct())
-//                    .select { SpeakingDaysTable.courseId eq courseId }
-//                    .firstOrNull()
-//                    ?.get(SpeakingParagraphResultsTable.userId.countDistinct())
-//                    ?.toInt() ?: 0
-//
-//                val vocabNumber = row[CoursesTable.deckId]?.let { dId ->
-//                    FlashcardsTable.select { FlashcardsTable.deckId eq dId }.count().toInt()
-//                } ?: 0
-//
-//                val favoriteUserCount = UserFavoriteCoursesTable
-//                    .select { UserFavoriteCoursesTable.courseId eq courseId }
-//                    .count()
-//                    .toInt()
-//
-//                ShortCourseDto(
-//                    id = courseId.value,
-//                    thumbnail_url = row[CoursesTable.thumbnailUrl],
-//                    topic = TopicDto(
-//                        id = row[TopicsTable.id]?.value ?: 0,
-//                        name = row[TopicsTable.name] ?: "",
-//                        colorHex = row[TopicsTable.color] ?: "#636AE8"
-//                    ),
-//                    title = row[CoursesTable.title],
-//                    description = row[CoursesTable.description] ?: "",
-//                    creator_name = row[UsersTable.name],
-//                    creator_avatar_url = row[UsersTable.avatarUrl] ?: "",
-//                    is_favorite = isFavorite,
-//                    vocabNumber = vocabNumber,
-//                    studying_user_count = studyingUserCount,
-//                    favorite_user_count = favoriteUserCount,
-//                    created_at = row[CoursesTable.createdAt].toString()
-//                )
-//            }
-//    }
-
-
 
     suspend fun createCourse(userId: Int, course: CreateCourseRequest): Long = dbQuery {
         CoursesTable.insertAndGetId {

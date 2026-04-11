@@ -27,6 +27,11 @@ class CoursesService (
         return courseRepository.getStudyingCourses(userId)
     }
 
+    suspend fun getLearningCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse {
+        return courseRepository.getLearningCourses(userId, searchInfo, nextCursor)
+    }
+
+
     suspend fun getMyCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse {
         return courseRepository.getMyCourses(userId, searchInfo, nextCursor)
     }

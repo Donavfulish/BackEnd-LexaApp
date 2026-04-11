@@ -52,3 +52,10 @@ data class UpdateDeckResultRequest(
     val rememberedCount: Int,
     val forgottenCount: Int
 )
+
+@Serializable
+data class AllDeckPaginationResponse(
+    val data: List<DeckDto>,
+    val searchInfo: SearchInfo,
+    val nextCursor: Long?= null,
+    val totalItem: Long)

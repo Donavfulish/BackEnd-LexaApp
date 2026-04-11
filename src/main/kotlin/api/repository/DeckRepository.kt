@@ -1,21 +1,27 @@
 package api.repository
 
+import api.models.dto.AllCoursePaginationResponse
+import api.models.dto.AllDeckPaginationResponse
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
 import api.models.dto.CreateDeckRequest
 import api.models.dto.CreateDeckResultRequest
 import api.models.dto.DeckDto
 import api.models.dto.DeckResult
+import api.models.dto.SearchInfo
 import api.models.dto.ShortCourseDto
 import api.models.dto.TopicDto
 import api.models.dto.UpdateDeckRequest
 import api.models.dto.UpdateDeckResultRequest
+import api.models.enum.OrderBy
 import api.models.enum.PrivacyType
+import api.models.enum.SortBy
 import api.models.tables.CoursesTable
 import api.models.tables.CoursesTable.deckId
 import api.models.tables.DeckResultsTable
 import api.models.tables.FlashcardDecksTable
 import api.models.tables.FlashcardResultsTable
 import api.models.tables.FlashcardsTable
+import api.models.tables.SearchEngine
 import api.models.tables.SpeakingDaysTable
 import api.models.tables.SpeakingParagraphResultsTable
 import api.models.tables.SpeakingParagraphsTable
@@ -163,13 +169,40 @@ class DeckRepository {
             }
     }
     
-    suspend fun getAllDecks(userId: Int?): List<DeckDto> = dbQuery {
+    suspend fun getAllDecks(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllDeckPaginationResponse = dbQuery {
+        val query = searchInfo.query ?: ""
+        val sortBy = SortBy.fromString(searchInfo.sortBy)
+        val orderBy = OrderBy.fromString(searchInfo.order)
+        val limit = searchInfo.limit ?: 20
+        val lastId = nextCursor
+
+        var isRevelant = false
+        if (searchInfo.sortBy.isNullOrEmpty() and !searchInfo.query.isNullOrEmpty()) {
+            isRevelant = true
+        }
+
+        var queryList = if (query.isNotEmpty()) {
+            SearchEngine.searchAllDecks(query, userId)
+        } else null
+
+        if (queryList != null && queryList.isEmpty()) {
+            AllDeckPaginationResponse(emptyList(), searchInfo, null, 0)
+        }
+
+        val sortColumn = when (sortBy) {
+            SortBy.CREATED -> FlashcardDecksTable.createdAt
+            SortBy.TITLE -> FlashcardDecksTable.title
+        }
+
+        val lastValue = if (lastId != null && queryList.isNullOrEmpty()) {
+            FlashcardDecksTable.slice(sortColumn).select { FlashcardDecksTable.id eq lastId }.singleOrNull()?.get(sortColumn)?.toString()
+        } else null
         val vocabCountExpr = wrapAsExpression<Long>(
             FlashcardsTable
                 .slice(FlashcardsTable.id.count())
                 .select { FlashcardsTable.deckId eq FlashcardDecksTable.id }
         )
-        val query = (FlashcardDecksTable leftJoin TopicsTable)
+        val baseQuery = (FlashcardDecksTable leftJoin TopicsTable)
             .slice(
                 FlashcardDecksTable.id,
                 FlashcardDecksTable.title,
@@ -179,19 +212,48 @@ class DeckRepository {
                 TopicsTable.color,
                 vocabCountExpr
             )
-        val finalQuery = if (userId != null) {
-            query.select { FlashcardDecksTable.creatorId eq userId }
-        } else {
-            query.selectAll()
+            .select { FlashcardDecksTable.creatorId eq userId }
+
+        var totalCount = baseQuery.count()
+        val sortOrder = if (orderBy == OrderBy.ASC) SortOrder.ASC else SortOrder.DESC
+
+        if (!queryList.isNullOrEmpty()) {
+            totalCount = queryList!!.size.toLong()
+            if (lastId != null) {
+                val startIndex = queryList!!.indexOfFirst { it.id == lastId }
+                queryList = queryList!!.subList(startIndex + 1, if (startIndex + 10 > queryList!!.size) queryList!!.size else startIndex + 11)
+            } else {
+                queryList = queryList!!.subList(0, if (10 > queryList!!.size) queryList!!.size else 10)
+            }
+            baseQuery.andWhere { FlashcardDecksTable.id inList queryList!!.map { it.id } }
         }
-        finalQuery.map { row ->
+
+        if (lastId != null && lastValue != null && !isRevelant) {
+            baseQuery.andWhere {
+                val lastTime = if (sortBy == SortBy.CREATED) LocalDateTime.parse(lastValue) else null
+                if (sortOrder == SortOrder.DESC) {
+                    when (sortBy) {
+                        SortBy.CREATED -> (FlashcardDecksTable.createdAt less lastTime!!) or ((FlashcardDecksTable.createdAt eq lastTime) and (FlashcardDecksTable.id less lastId))
+                        SortBy.TITLE -> (FlashcardDecksTable.title less lastValue) or ((FlashcardDecksTable.title eq lastValue) and (FlashcardDecksTable.id less lastId))
+                    }
+                } else {
+                    when (sortBy) {
+                        SortBy.CREATED -> (FlashcardDecksTable.createdAt greater lastTime!!) or ((FlashcardDecksTable.createdAt eq lastTime) and (FlashcardDecksTable.id greater lastId))
+                        SortBy.TITLE -> (FlashcardDecksTable.title greater lastValue) or ((FlashcardDecksTable.title eq lastValue) and (FlashcardDecksTable.id greater lastId))
+                    }
+                }
+            }
+        }
+
+        if (!isRevelant) baseQuery.orderBy(sortColumn, sortOrder).limit(limit)
+
+        val results = baseQuery.map { row ->
             DeckDto(
                 id = row[FlashcardDecksTable.id].value,
                 title = row[FlashcardDecksTable.title],
                 topic = row.getOrNull(TopicsTable.id)?.let { topicId ->
                     TopicDto(
                         id = topicId.value,
-                        // Lưu ý: Cũng nên dùng getOrNull cho các cột khác của bảng right
                         name = row.getOrNull(TopicsTable.name) ?: "",
                         colorHex = row.getOrNull(TopicsTable.color) ?: "#FFFFFF",
                     )
@@ -200,7 +262,19 @@ class DeckRepository {
                 createdAt = convertTime(row[FlashcardDecksTable.createdAt])
             )
         }
+
+        val finalResults = if (isRevelant && queryList != null) {
+            val idOrder = queryList!!.map { it.id }.withIndex().associate { it.value to it.index }
+            results.sortedBy { idOrder[it.id] }
+        } else results
+
+        val lastItem = finalResults.lastOrNull()
+        val nextCursorRes = if (finalResults.size == limit && lastItem != null) lastItem.id else null
+
+        AllDeckPaginationResponse(finalResults, searchInfo, nextCursorRes, totalCount)
     }
+
+
 
     private fun convertTime(dateTime: LocalDateTime): String {
         val now = LocalDateTime.now()

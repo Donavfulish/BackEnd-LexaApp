@@ -133,11 +133,20 @@ fun Route.deckRoutes(service: DeckService) {
     }
 
     // ===== FAVORITE LIST =====
-    secureRoute("/api/user/me/deck/favorite") {
+    secureRoute("/api/user/me/decks/favorite") {
 
         get {
             val userId = call.getUserIdOrRespond() ?: return@get
-            val data = service.getFavoriteDecks(userId)
+            val queryParams = call.request.queryParameters
+
+            val searchInfo = SearchInfo(
+                query = queryParams["query"] ?: "",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
+                order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
+                limit = queryParams["limit"]?.toIntOrNull() ?: 20
+            )
+            val nextCursor = queryParams["next_id"]?.toLongOrNull()
+            val data = service.getFavoriteDecks(userId, searchInfo, nextCursor)
 
             call.respond(HttpStatusCode.OK, successResponse(data, "Danh sách yêu thích"))
         }

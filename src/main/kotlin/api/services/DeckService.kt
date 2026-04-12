@@ -10,10 +10,13 @@ import api.models.dto.SearchInfo
 import api.models.dto.ShortCourseDto
 import api.models.dto.UpdateDeckRequest
 import api.models.dto.UpdateDeckResultRequest
+import api.repository.CoursesRepository
 import api.repository.DeckRepository
+import com.lexa.api.config.DatabaseFactory.dbQuery
 
 class DeckService(
-    private val deckRepository: DeckRepository
+    private val deckRepository: DeckRepository,
+    private val courseRepository: CoursesRepository
 ) {
 
     suspend fun getMyDecks(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllDeckPaginationResponse{
@@ -51,8 +54,8 @@ class DeckService(
         }
     }
 
-    suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> {
-        return deckRepository.getFavoriteDecks(userId)
+    suspend fun getFavoriteDecks(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse = dbQuery {
+        courseRepository.getFavoriteCourses(userId, searchInfo, nextCursor)
     }
 
     suspend fun addDeck(request: CreateDeckRequest) : Result<Long>{

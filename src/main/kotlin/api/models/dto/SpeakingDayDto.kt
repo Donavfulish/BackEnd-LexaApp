@@ -15,6 +15,12 @@ data class ShortSpeakingDayDto(
 )
 
 @Serializable
+data class SpeakingDayPagination(
+    val data: List<ShortSpeakingDayDto>,
+    val totalItems: Int
+)
+
+@Serializable
 data class ShortParagraphSpeakingDayDto(
     val title: String?,
     val list_paragraphs: List<ShortParagraphDto>

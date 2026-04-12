@@ -8,6 +8,7 @@ import api.utils.getLongParamOrRespond
 import api.utils.getUserIdOrRespond
 import api.utils.handleResult
 import api.services.CoursesService
+import api.services.SpeakingDayService
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.PartData
 import io.ktor.http.content.forEachPart
@@ -19,7 +20,7 @@ import io.ktor.utils.io.readRemaining
 import kotlinx.io.readByteArray
 import kotlinx.serialization.json.Json
 
-fun Route.courseRoutes(service: CoursesService) {
+fun Route.courseRoutes(service: CoursesService, speakingDayService: SpeakingDayService) {
 
     // ===== PUBLIC (NO AUTH REQUIRED FOR SOME) =====
     route("/api/topics") {
@@ -53,13 +54,13 @@ fun Route.courseRoutes(service: CoursesService) {
             call.respond(HttpStatusCode.OK, successResponse(data, "Top khóa học"))
         }
 
-        get("") {
+        get {
             val userId = call.getUserIdOrRespond() ?: return@get
             val queryParams = call.request.queryParameters
 
             val searchInfo = SearchInfo(
                 query = queryParams["query"] ?: "",
-                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "created",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
                 order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
                 limit = queryParams["limit"]?.toIntOrNull() ?: 10
             )
@@ -99,15 +100,35 @@ fun Route.courseRoutes(service: CoursesService) {
             )
         }
 
-        // ===== COURSE DETAIL (speaking days) =====
-        get("/{courseId}/speaking-days") {
+        // ===== COURSE DETAIL =====
+        get("/{courseId}/course-detail") {
             val userId = call.getUserIdOrRespond() ?: return@get
             val courseId = call.getLongParamOrRespond("courseId") ?: return@get
 
-            val data = service.getSpeakingDayCourse(userId, courseId)
+            val data = service.getCourseDetail(userId, courseId)
 
             if (data != null) {
-                call.respond<ApiResponse<SpeakingCourseDetailDto>>(
+                call.respond<ApiResponse<CourseDetailDto>>(
+                    HttpStatusCode.OK,
+                    successResponse(data, "Chi tiết khóa học")
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    errorResponse("Không tìm thấy hoặc private")
+                )
+            }
+        }
+
+        get("/{courseId}/speaking-day") {
+            val userId = call.getUserIdOrRespond() ?: return@get
+            val courseId = call.getLongParamOrRespond("courseId") ?: return@get
+            val nextOrder = call.getLongParamOrRespond("nextOrder") ?: null
+
+            val data = speakingDayService.getSpeakingDays(userId, courseId, nextOrder)
+
+            if (data != null) {
+                call.respond<ApiResponse<SpeakingDayPagination>>(
                     HttpStatusCode.OK,
                     successResponse(data, "Chi tiết khóa học")
                 )
@@ -121,13 +142,38 @@ fun Route.courseRoutes(service: CoursesService) {
     }
 
     // ===== USER FAVORITE LIST =====
-    secureRoute("/api/user/me/course/favorite") {
+    secureRoute("/api/user/me/course") {
 
-        get {
+        get("/favorite") {
             val userId = call.getUserIdOrRespond() ?: return@get
-            val data = service.getFavoriteCourses(userId)
+            val queryParams = call.request.queryParameters
+
+            val searchInfo = SearchInfo(
+                query = queryParams["query"] ?: "",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
+                order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
+                limit = queryParams["limit"]?.toIntOrNull() ?: 10
+            )
+            val nextCursor = queryParams["next_id"]?.toLongOrNull()
+            val data = service.getFavoriteCourses(userId, searchInfo, nextCursor)
 
             call.respond(HttpStatusCode.OK, successResponse(data, "Danh sách yêu thích"))
+        }
+
+        get("/learning") {
+            val userId = call.getUserIdOrRespond() ?: return@get
+            val queryParams = call.request.queryParameters
+
+            val searchInfo = SearchInfo(
+                query = queryParams["query"] ?: "",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
+                order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
+                limit = queryParams["limit"]?.toIntOrNull() ?: 10
+            )
+            val nextCursor = queryParams["next_id"]?.toLongOrNull()
+            val data = service.getLearningCourses(userId, searchInfo, nextCursor)
+
+            call.respond(HttpStatusCode.OK, successResponse(data, "Danh sách đang học"))
         }
     }
 
@@ -136,7 +182,17 @@ fun Route.courseRoutes(service: CoursesService) {
 
         get {
             val userId = call.getUserIdOrRespond() ?: return@get
-            val data = service.getMyCourses(userId)
+            val queryParams = call.request.queryParameters
+
+            val searchInfo = SearchInfo(
+                query = queryParams["query"] ?: "",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
+                order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
+                limit = queryParams["limit"]?.toIntOrNull() ?: 10
+            )
+            val nextCursor = queryParams["next_id"]?.toLongOrNull()
+
+            val data = service.getMyCourses(userId, searchInfo, nextCursor)
 
             call.respond(HttpStatusCode.OK, successResponse(data, "Khóa học của tôi"))
         }

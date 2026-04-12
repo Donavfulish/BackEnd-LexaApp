@@ -1,23 +1,26 @@
 package api.services
 
+import api.models.dto.AllCoursePaginationResponse
+import api.models.dto.AllDeckPaginationResponse
 import api.models.dto.CreateDeckRequest
 import api.models.dto.CreateDeckResultRequest
 import api.models.dto.DeckDto
 import api.models.dto.DeckResult
+import api.models.dto.SearchInfo
 import api.models.dto.ShortCourseDto
 import api.models.dto.UpdateDeckRequest
 import api.models.dto.UpdateDeckResultRequest
+import api.repository.CoursesRepository
 import api.repository.DeckRepository
+import com.lexa.api.config.DatabaseFactory.dbQuery
 
 class DeckService(
-    private val deckRepository: DeckRepository
+    private val deckRepository: DeckRepository,
+    private val courseRepository: CoursesRepository
 ) {
-    suspend fun getAllDecks(): List<DeckDto>{
-        return deckRepository.getAllDecks(null);
-    }
 
-    suspend fun getMyDecks(userId: Int): List<DeckDto>{
-        return deckRepository.getAllDecks(userId);
+    suspend fun getMyDecks(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllDeckPaginationResponse{
+        return deckRepository.getAllDecks(userId, searchInfo, nextCursor);
     }
 
     suspend fun getDeckResult(userId: Int, deckId: Long): Result<DeckResult?> {
@@ -51,8 +54,8 @@ class DeckService(
         }
     }
 
-    suspend fun getFavoriteDecks(userId: Int): List<ShortCourseDto> {
-        return deckRepository.getFavoriteDecks(userId)
+    suspend fun getFavoriteDecks(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse = dbQuery {
+        courseRepository.getFavoriteCourses(userId, searchInfo, nextCursor)
     }
 
     suspend fun addDeck(request: CreateDeckRequest) : Result<Long>{

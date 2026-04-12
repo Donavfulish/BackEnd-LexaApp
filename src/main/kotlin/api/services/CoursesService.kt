@@ -17,8 +17,8 @@ class CoursesService (
     suspend fun getAllCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse {
         return courseRepository.getAllCourses(userId, searchInfo, nextCursor)
     }
-    suspend fun getSpeakingDayCourse(userId: Int, courseId: Long): SpeakingCourseDetailDto? {
-        return courseRepository.getSpeakingDayCourse(userId, courseId)
+    suspend fun getCourseDetail(userId: Int, courseId: Long): CourseDetailDto? {
+        return courseRepository.getCourseDetail(userId, courseId)
     }
     suspend fun getTopStudiedCourses(userId: Int): List<GetFeaturedCourseResponse> {
         return courseRepository.getTopStudiedCourses(userId)
@@ -27,13 +27,18 @@ class CoursesService (
         return courseRepository.getStudyingCourses(userId)
     }
 
-    suspend fun getMyCourses(userId: Int): List<ShortCourseDto> {
-        return courseRepository.getMyCourses(userId)
+    suspend fun getLearningCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse {
+        return courseRepository.getLearningCourses(userId, searchInfo, nextCursor)
     }
 
 
-    suspend fun getFavoriteCourses(userId: Int): List<ShortCourseDto> {
-        return courseRepository.getFavoriteCourses(userId)
+    suspend fun getMyCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse {
+        return courseRepository.getMyCourses(userId, searchInfo, nextCursor)
+    }
+
+
+    suspend fun getFavoriteCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse {
+        return courseRepository.getFavoriteCourses(userId, searchInfo, nextCursor)
     }
 
     suspend fun addCourse(userId: Int, course: CreateCourseRequest) : Result<Long> {

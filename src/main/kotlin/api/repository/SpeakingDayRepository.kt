@@ -5,6 +5,8 @@ import api.models.dto.EditSpeakingDayRequest
 import api.models.dto.ReorderParagraphsRequest
 import api.models.dto.ShortParagraphDto
 import api.models.dto.ShortParagraphSpeakingDayDto
+import api.models.dto.ShortSpeakingDayDto
+import api.models.dto.SpeakingDayPagination
 import api.models.tables.CoursesTable
 import api.models.tables.SpeakingDaysTable
 import api.models.tables.SpeakingParagraphResultsTable
@@ -14,6 +16,8 @@ import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.andWhere
+import org.jetbrains.exposed.sql.count
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.max
@@ -42,6 +46,56 @@ class SpeakingDayRepository {
             )
         }
         .singleOrNull()
+    }
+
+    suspend fun getSpeakingDays(userId: Int, courseId: Long, nextOrder: Long?): SpeakingDayPagination = dbQuery {
+        val baseQuery = SpeakingDaysTable
+            .select { (SpeakingDaysTable.courseId eq courseId) }
+
+        val totalItems = baseQuery.count()
+        if(nextOrder != null){
+            baseQuery.andWhere {
+                SpeakingDaysTable.dayOrder greater nextOrder
+            }
+        }
+
+        val results = baseQuery
+            .orderBy(SpeakingDaysTable.dayOrder to SortOrder.ASC)
+            .limit(10)
+            .map { dayRow ->
+                val dayId = dayRow[SpeakingDaysTable.id]
+
+                val totalParaExpr = SpeakingParagraphsTable.id.count()
+                val totalParas: Long = SpeakingParagraphsTable
+                    .slice(totalParaExpr)
+                    .select { SpeakingParagraphsTable.speakingDayId eq dayId }
+                    .firstOrNull()
+                    ?.get(totalParaExpr) ?: 0L
+
+                val doneParaExpr = SpeakingParagraphResultsTable.paragraphId.count()
+                val doneParas: Long = (SpeakingParagraphResultsTable
+                    .innerJoin(SpeakingParagraphsTable)
+                    .slice(doneParaExpr)
+                    .select {
+                        (SpeakingParagraphsTable.speakingDayId eq dayId) and
+                                (SpeakingParagraphResultsTable.userId eq userId)
+                    }
+                    .firstOrNull()
+                    ?.get(doneParaExpr) ?: 0L)
+
+                val completed = if (totalParas == 0L) 0 else ((doneParas * 100) / totalParas).toInt()
+
+                ShortSpeakingDayDto(
+                    speakingDayId = dayRow[SpeakingDaysTable.id].value,
+                    title = dayRow[SpeakingDaysTable.title] ?: "",
+                    completed = completed,
+                    paragraphNum = totalParas.toInt()
+                )
+            }
+        SpeakingDayPagination(
+            data = results,
+            totalItems = totalItems.toInt()
+        )
     }
 
     suspend fun addSpeakingDay(userId: Int, speakingDay: CreateSpeakingDayRequest): Long = dbQuery {

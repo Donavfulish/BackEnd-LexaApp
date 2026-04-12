@@ -6,7 +6,8 @@ import api.models.dto.EditSpeakingDayRequest
 import api.models.dto.ReorderParagraphsRequest
 import api.models.dto.ShortCourseDto
 import api.models.dto.ShortParagraphSpeakingDayDto
-import api.models.dto.SpeakingCourseDetailDto
+import api.models.dto.CourseDetailDto
+import api.models.dto.SpeakingDayPagination
 import api.repository.CoursesRepository
 import api.repository.SpeakingDayRepository
 import com.lexa.api.config.DatabaseFactory.dbQuery
@@ -16,6 +17,10 @@ class SpeakingDayService (
 ) {
     suspend fun getParagraphSpeakingDay(speakingDayId: Long): ShortParagraphSpeakingDayDto? {
         return speakingDayRepository.getParagraphSpeakingDay(speakingDayId)
+    }
+
+    suspend fun getSpeakingDays(userId: Int, courseId: Long, nextOrder: Long?): SpeakingDayPagination{
+        return speakingDayRepository.getSpeakingDays(userId, courseId, nextOrder)
     }
 
     suspend fun addSpeakingDay(userId: Int, speakingDay: CreateSpeakingDayRequest): Result<Long> {

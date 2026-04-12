@@ -17,8 +17,8 @@ class CoursesService (
     suspend fun getAllCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse {
         return courseRepository.getAllCourses(userId, searchInfo, nextCursor)
     }
-    suspend fun getSpeakingDayCourse(userId: Int, courseId: Long): SpeakingCourseDetailDto? {
-        return courseRepository.getSpeakingDayCourse(userId, courseId)
+    suspend fun getCourseDetail(userId: Int, courseId: Long): CourseDetailDto? {
+        return courseRepository.getCourseDetail(userId, courseId)
     }
     suspend fun getTopStudiedCourses(userId: Int): List<GetFeaturedCourseResponse> {
         return courseRepository.getTopStudiedCourses(userId)

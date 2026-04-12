@@ -1,6 +1,7 @@
 package api.repository
 
 import api.models.dto.AllCoursePaginationResponse
+import api.models.dto.CourseDetailDto
 import api.models.dto.ShortCourseDto
 import api.models.dto.CreateCourseRequest
 import api.models.dto.CreatorDto
@@ -9,7 +10,6 @@ import api.models.dto.GetFeaturedCourseResponse
 import api.models.dto.GetStudyingCourseResponse
 import api.models.dto.SearchInfo
 import api.models.dto.ShortSpeakingDayDto
-import api.models.dto.SpeakingCourseDetailDto
 import api.models.dto.TopicDto
 import api.models.enum.OrderBy
 import api.models.tables.CoursesTable
@@ -37,6 +37,8 @@ import java.time.LocalDateTime
 
 // Nơi giao tiếp trực tiếp với database (nơi này sẽ được sử dụng models và dto)
 class CoursesRepository {
+
+    private val speakingDayRepository = SpeakingDayRepository()
     private fun getStudyingUserCount(courseId: EntityID<Long>): Int {
         val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()
         return (SpeakingParagraphResultsTable
@@ -217,8 +219,6 @@ class CoursesRepository {
     }
 
 
-
-
     suspend fun getTopics(): List<TopicDto> = dbQuery {
         TopicsTable
             .selectAll()
@@ -231,7 +231,8 @@ class CoursesRepository {
             }
     }
 
-    suspend fun getSpeakingDayCourse(userId: Int, courseId: Long): SpeakingCourseDetailDto? = dbQuery {
+
+    suspend fun getCourseDetail(userId: Int, courseId: Long): CourseDetailDto? = dbQuery {
 
         val row = CoursesTable
             .innerJoin(UsersTable)
@@ -269,39 +270,7 @@ class CoursesRepository {
             .firstOrNull()
             ?.get(favoriteCountExpr) ?: 0L).toInt()
 
-        val list_speaking_day = SpeakingDaysTable
-            .select { SpeakingDaysTable.courseId eq courseIdEntity }
-            .orderBy(SpeakingDaysTable.dayOrder to SortOrder.ASC)
-            .map { dayRow ->
-                val dayId = dayRow[SpeakingDaysTable.id]
-
-                val totalParaExpr = SpeakingParagraphsTable.id.count()
-                val totalParas: Long = SpeakingParagraphsTable
-                    .slice(totalParaExpr)
-                    .select { SpeakingParagraphsTable.speakingDayId eq dayId }
-                    .firstOrNull()
-                    ?.get(totalParaExpr) ?: 0L
-
-                val doneParaExpr = SpeakingParagraphResultsTable.paragraphId.count()
-                val doneParas: Long = (SpeakingParagraphResultsTable
-                    .innerJoin(SpeakingParagraphsTable)
-                    .slice(doneParaExpr)
-                    .select {
-                        (SpeakingParagraphsTable.speakingDayId eq dayId) and
-                                (SpeakingParagraphResultsTable.userId eq userId)
-                    }
-                    .firstOrNull()
-                    ?.get(doneParaExpr) ?: 0L)
-
-                val completed = if (totalParas == 0L) 0 else ((doneParas * 100) / totalParas).toInt()
-
-                ShortSpeakingDayDto(
-                    speakingDayId = dayRow[SpeakingDaysTable.id].value,
-                    title = dayRow[SpeakingDaysTable.title] ?: "",
-                    completed = completed,
-                    paragraphNum = totalParas.toInt()
-                )
-            }
+        val list_speaking_day = speakingDayRepository.getSpeakingDays(userId, courseId, null)
 
         val list_topic = TopicsTable
             .selectAll()
@@ -314,7 +283,7 @@ class CoursesRepository {
             }
 
         // Trả về DTO cuối cùng
-        SpeakingCourseDetailDto(
+        CourseDetailDto(
             id = courseIdEntity.value,
             thumbnail_url = row[CoursesTable.thumbnailUrl],
             creator = CreatorDto(
@@ -330,7 +299,7 @@ class CoursesRepository {
             favorite_user_count = favoriteUserCount,
             description = row[CoursesTable.description],
             deckId = row[CoursesTable.deckId]?.value ?: null,
-            list_speaking_day = list_speaking_day,
+            list_speaking_day = list_speaking_day.data,
             list_topic = list_topic
         )
     }

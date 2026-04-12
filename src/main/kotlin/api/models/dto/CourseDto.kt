@@ -49,7 +49,7 @@ data class CreatorDto(
 )
 
 @Serializable
-data class SpeakingCourseDetailDto(
+data class CourseDetailDto(
     val id: Long,
     val thumbnail_url: String?,
     val creator: CreatorDto,
@@ -64,8 +64,6 @@ data class SpeakingCourseDetailDto(
     val list_speaking_day: List<ShortSpeakingDayDto>,
     val list_topic: List<TopicDto>
 )
-
-
 
 // DTO dùng để nhận dữ liệu từ Client (Request Body cho luồng POST)
 @Serializable

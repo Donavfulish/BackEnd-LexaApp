@@ -33,7 +33,9 @@ import java.io.File
 
 fun Application.configureRouting() {
     routing {
-        courseRoutes(service = CoursesService(CoursesRepository()))
+        courseRoutes(service = CoursesService(CoursesRepository()), speakingDayService = SpeakingDayService(
+            SpeakingDayRepository()
+        ))
         authRoutes(authService = AuthService(AuthRepository()))
         deckRoutes(service = DeckService(DeckRepository(), CoursesRepository()))
         flashcardRoutes(service = FlashcardService(FlashcardRepository()))

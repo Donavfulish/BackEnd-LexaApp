@@ -6,12 +6,13 @@ import api.utils.getLongParamOrRespond
 import api.utils.getUserIdOrRespond
 import api.utils.handleResult
 import api.services.CoursesService
+import api.services.SpeakingDayService
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
 
-fun Route.courseRoutes(service: CoursesService) {
+fun Route.courseRoutes(service: CoursesService, speakingDayService: SpeakingDayService) {
 
     // ===== PUBLIC (NO AUTH REQUIRED FOR SOME) =====
     route("/api/topics") {
@@ -91,15 +92,35 @@ fun Route.courseRoutes(service: CoursesService) {
             )
         }
 
-        // ===== COURSE DETAIL (speaking days) =====
-        get("/{courseId}/speaking-days") {
+        // ===== COURSE DETAIL =====
+        get("/{courseId}/course-detail") {
             val userId = call.getUserIdOrRespond() ?: return@get
             val courseId = call.getLongParamOrRespond("courseId") ?: return@get
 
-            val data = service.getSpeakingDayCourse(userId, courseId)
+            val data = service.getCourseDetail(userId, courseId)
 
             if (data != null) {
-                call.respond<ApiResponse<SpeakingCourseDetailDto>>(
+                call.respond<ApiResponse<CourseDetailDto>>(
+                    HttpStatusCode.OK,
+                    successResponse(data, "Chi tiết khóa học")
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.NotFound,
+                    errorResponse("Không tìm thấy hoặc private")
+                )
+            }
+        }
+
+        get("/{courseId}/speaking-day") {
+            val userId = call.getUserIdOrRespond() ?: return@get
+            val courseId = call.getLongParamOrRespond("courseId") ?: return@get
+            val nextOrder = call.getLongParamOrRespond("nextOrder") ?: null
+
+            val data = speakingDayService.getSpeakingDays(userId, courseId, nextOrder)
+
+            if (data != null) {
+                call.respond<ApiResponse<SpeakingDayPagination>>(
                     HttpStatusCode.OK,
                     successResponse(data, "Chi tiết khóa học")
                 )

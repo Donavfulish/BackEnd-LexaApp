@@ -84,5 +84,24 @@ fun Route.speakingDayRoutes(service: SpeakingDayService) {
                 }
             )
         }
+
+        // REORDER PARAGRAPHS
+        patch("/{speakingDayId}/paragraphs/reorder") {
+            val userId = call.getUserIdOrRespond() ?: return@patch
+            val speakingDayId = call.getLongParamOrRespond("speakingDayId") ?: return@patch
+            val request = call.receive<ReorderParagraphsRequest>()
+
+            service.reorderParagraphs(userId, speakingDayId, request).handleResult(
+                onSuccess = {
+                    call.respond(
+                        HttpStatusCode.OK,
+                        successResponse(null, "Cập nhật thứ tự thành công")
+                    )
+                },
+                onError = {
+                    call.respond(HttpStatusCode.BadRequest, errorResponse(it))
+                }
+            )
+        }
     }
 }

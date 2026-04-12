@@ -29,3 +29,14 @@ data class CreateSpeakingDayRequest(
 data class EditSpeakingDayRequest(
     val title: String?,
 )
+
+@Serializable
+data class ParagraphOrderDto(
+    val id: Long,
+    val order: Long
+)
+
+@Serializable
+data class ReorderParagraphsRequest(
+    val paragraphs: List<ParagraphOrderDto>
+)

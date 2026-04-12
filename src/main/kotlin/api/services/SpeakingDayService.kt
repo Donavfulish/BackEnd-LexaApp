@@ -3,6 +3,7 @@ package api.services
 import api.models.dto.CreateCourseRequest
 import api.models.dto.CreateSpeakingDayRequest
 import api.models.dto.EditSpeakingDayRequest
+import api.models.dto.ReorderParagraphsRequest
 import api.models.dto.ShortCourseDto
 import api.models.dto.ShortParagraphSpeakingDayDto
 import api.models.dto.SpeakingCourseDetailDto
@@ -62,6 +63,22 @@ class SpeakingDayService (
                 Result.success(true)
             } else {
                 Result.failure(IllegalArgumentException("Không tìm thấy bài học này để xóa"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun reorderParagraphs(userId: Int, speakingDayId: Long, request: ReorderParagraphsRequest): Result<Boolean> {
+        return try {
+            if (request.paragraphs.isEmpty()) {
+                return Result.failure(IllegalArgumentException("Danh sách đoạn văn trống"))
+            }
+            val isUpdated = speakingDayRepository.reorderParagraphs(userId, speakingDayId, request)
+            if (isUpdated) {
+                Result.success(true)
+            } else {
+                Result.failure(IllegalArgumentException("Cập nhật thứ tự thất bại"))
             }
         } catch (e: Exception) {
             Result.failure(e)

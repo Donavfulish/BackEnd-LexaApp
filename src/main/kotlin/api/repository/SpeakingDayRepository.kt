@@ -2,6 +2,7 @@ package api.repository
 
 import api.models.dto.CreateSpeakingDayRequest
 import api.models.dto.EditSpeakingDayRequest
+import api.models.dto.ReorderParagraphsRequest
 import api.models.dto.ShortParagraphDto
 import api.models.dto.ShortParagraphSpeakingDayDto
 import api.models.tables.CoursesTable
@@ -118,5 +119,45 @@ class SpeakingDayRepository {
             }
         }
         deletedRows > 0
+    }
+
+    suspend fun reorderParagraphs(userId: Int, speakingDayId: Long, request: ReorderParagraphsRequest): Boolean = dbQuery {
+        // 1. Kiểm tra quyền sở hữu bài học
+        val speakingDayWithCourse = SpeakingDaysTable
+            .innerJoin(CoursesTable, {SpeakingDaysTable.courseId}, { CoursesTable.id })
+            .select { SpeakingDaysTable.id eq speakingDayId }
+            .singleOrNull() ?: throw IllegalArgumentException("Không tìm thấy bài học này")
+
+        val creatorIdInDb = speakingDayWithCourse[CoursesTable.creatorId].value
+        if (creatorIdInDb != userId) {
+            throw IllegalArgumentException("Bạn không có quyền chỉnh sửa bài học của người khác")
+        }
+
+        // --- TRÁNH LỖI DUPLICATE UNIQUE CONSTRAINT ---
+
+        // BƯỚC 1: Cập nhật tất cả các đoạn văn sang giá trị âm (tạm thời)
+        // Mục đích: Dọn chỗ trống, tránh đụng độ với các paragraph_order đang tồn tại
+        request.paragraphs.forEach { paragraphToUpdate ->
+            SpeakingParagraphsTable.update({
+                (SpeakingParagraphsTable.id eq paragraphToUpdate.id) and
+                        (SpeakingParagraphsTable.speakingDayId eq speakingDayId)
+            }) {
+                // Đảo thành số âm
+                it[paragraphOrder] = -(paragraphToUpdate.order)
+            }
+        }
+
+        // BƯỚC 2: Cập nhật lại về giá trị dương (giá trị thật)
+        request.paragraphs.forEach { paragraphToUpdate ->
+            SpeakingParagraphsTable.update({
+                (SpeakingParagraphsTable.id eq paragraphToUpdate.id) and
+                        (SpeakingParagraphsTable.speakingDayId eq speakingDayId)
+            }) {
+                it[paragraphOrder] = paragraphToUpdate.order
+                it[updatedAt] = java.time.LocalDateTime.now()
+            }
+        }
+
+        true
     }
 }

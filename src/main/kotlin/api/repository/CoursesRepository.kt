@@ -22,6 +22,7 @@ import api.models.tables.SpeakingDaysTable
 import api.models.enum.PrivacyType
 import api.models.enum.SortBy
 import api.models.tables.FlashcardsTable
+import api.services.CloudinaryService
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.select
@@ -608,16 +609,17 @@ class CoursesRepository {
         }.value
     }
     suspend fun editCourse(courseId: Long, userId: Int, course: EditCourseRequest): Boolean = dbQuery {
+        val existingCourse = CoursesTable
+            .select { CoursesTable.id eq courseId }
+            .singleOrNull()
+            ?: throw IllegalArgumentException(("Không tìm thấy khóa học này trong hệ thống"))
 
-            val existingCourse = CoursesTable
-                .select { CoursesTable.id eq courseId }
-                .singleOrNull()
-                ?: throw IllegalArgumentException(("Không tìm thấy khóa học này trong hệ thống"))
+        val creatorIdInDb = existingCourse[CoursesTable.creatorId].value
+        if (creatorIdInDb != userId) {
+            throw IllegalArgumentException(("Bạn không có quyền chỉnh sửa khóa học của người khác"))
+        }
 
-            val creatorIdInDb = existingCourse[CoursesTable.creatorId].value
-            if (creatorIdInDb != userId) {
-                throw IllegalArgumentException(("Bạn không có quyền chỉnh sửa khóa học của người khác"))
-            }
+        val oldThumbnailUrl = existingCourse[CoursesTable.thumbnailUrl]
 
         val updatedRows = CoursesTable.update({ CoursesTable.id eq courseId }) {
             it[topicId] = course.topicId
@@ -628,7 +630,13 @@ class CoursesRepository {
             it[updatedAt] = java.time.LocalDateTime.now()
         }
 
-        updatedRows > 0
+        if (updatedRows > 0) {
+            if (!oldThumbnailUrl.isNullOrEmpty())
+                CloudinaryService.deleteImage(oldThumbnailUrl)
+            true
+        } else {
+            false
+        }
     }
     suspend fun deleteCourse(courseId: Long, userId: Int): Boolean = dbQuery {
 
@@ -637,13 +645,21 @@ class CoursesRepository {
             .singleOrNull()
             ?: throw IllegalArgumentException(("Không tìm thấy khóa học này trong hệ thống"))
 
+        val thumbnailUrl = existingCourse[CoursesTable.thumbnailUrl]
+
         val creatorIdInDb = existingCourse[CoursesTable.creatorId].value
         if (creatorIdInDb != userId) {
             throw IllegalArgumentException(("Bạn không có quyền xóa khóa học của người khác"))
         }
         val deletedRows = CoursesTable.deleteWhere { CoursesTable.id eq courseId }
 
-        deletedRows > 0
+        if (deletedRows > 0) {
+            if (!thumbnailUrl.isNullOrEmpty())
+                CloudinaryService.deleteImage(thumbnailUrl)
+            true
+        } else {
+            false
+        }
     }
 
 

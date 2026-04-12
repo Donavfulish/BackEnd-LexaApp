@@ -1,15 +1,23 @@
 package api.routes
 
 import api.models.dto.*
+import api.models.enum.CloudinaryFolder
 import api.models.enum.UserRole
+import api.services.CloudinaryService
 import api.utils.getLongParamOrRespond
 import api.utils.getUserIdOrRespond
 import api.utils.handleResult
 import api.services.CoursesService
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
+import kotlinx.serialization.json.Json
 
 fun Route.courseRoutes(service: CoursesService) {
 
@@ -135,9 +143,40 @@ fun Route.courseRoutes(service: CoursesService) {
 
         post {
             val userId = call.getUserIdOrRespond() ?: return@post
-            val request = call.receive<CreateCourseRequest>()
 
-            service.addCourse(userId, request).handleResult(
+            val multipart = call.receiveMultipart()
+            var request: CreateCourseRequest? = null
+            var courseImageBytes: ByteArray? = null
+
+            multipart.forEachPart { part ->
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "data") {
+                            val jsonString = part.value
+                            request = Json.decodeFromString<CreateCourseRequest>(jsonString)
+                        }
+                    }
+                    is PartData.FileItem -> {
+                        val fileBytes = part.provider().readRemaining().readByteArray()
+                        when (part.name) {
+                            "courseImage" -> courseImageBytes = fileBytes
+                        }
+                        part.dispose()
+                    }
+                    else -> part.dispose()
+                }
+            }
+
+            if (request == null) {
+                call.respond(HttpStatusCode.BadRequest, "Thiếu dữ liệu tạo mới")
+            }
+
+            courseImageBytes?.let { bytes ->
+                val savedPath = CloudinaryService.uploadImage(bytes, CloudinaryFolder.COURSE.path)
+                request!!.thumbnailUrl = savedPath
+            }
+
+            service.addCourse(userId, request!!).handleResult(
                 onSuccess = {
                     call.respond(HttpStatusCode.Created, successResponse(it, "Tạo khóa học thành công"))
                 },
@@ -150,9 +189,40 @@ fun Route.courseRoutes(service: CoursesService) {
         patch("/{courseId}") {
             val userId = call.getUserIdOrRespond() ?: return@patch
             val courseId = call.getLongParamOrRespond("courseId") ?: return@patch
-            val request = call.receive<EditCourseRequest>()
 
-            service.editCourse(userId, courseId, request).handleResult(
+            val multipart = call.receiveMultipart()
+            var request: EditCourseRequest? = null
+            var courseImageBytes: ByteArray? = null
+
+            multipart.forEachPart { part ->
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "data") {
+                            val jsonString = part.value
+                            request = Json.decodeFromString<EditCourseRequest>(jsonString)
+                        }
+                    }
+                    is PartData.FileItem -> {
+                        val fileBytes = part.provider().readRemaining().readByteArray()
+                        when (part.name) {
+                            "courseImage" -> courseImageBytes = fileBytes
+                        }
+                        part.dispose()
+                    }
+                    else -> part.dispose()
+                }
+            }
+
+            if (request == null) {
+                call.respond(HttpStatusCode.BadRequest, "Thiếu dữ liệu cập nhật")
+            }
+
+            courseImageBytes?.let { bytes ->
+                val savedPath = CloudinaryService.uploadImage(bytes, CloudinaryFolder.COURSE.path)
+                request!!.thumbnailUrl = savedPath
+            }
+
+            service.editCourse(userId, courseId, request!!).handleResult(
                 onSuccess = {
                     call.respond(HttpStatusCode.OK, successResponse(null, "Chỉnh sửa thành công"))
                 },

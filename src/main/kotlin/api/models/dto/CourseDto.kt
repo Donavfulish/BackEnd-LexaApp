@@ -74,7 +74,7 @@ data class CreateCourseRequest(
     val title: String,
     val description: String? = null,
     val privacy: String,
-    val thumbnailUrl: String? = null
+    var thumbnailUrl: String? = null
 )
 @Serializable
 data class EditCourseRequest(
@@ -82,7 +82,7 @@ data class EditCourseRequest(
     val title: String,
     val description: String? = null,
     val privacy: String,
-    val thumbnailUrl: String? = null
+    var thumbnailUrl: String? = null
 )
 
 // Pagination, sort, query and filter.

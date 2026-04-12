@@ -1,14 +1,22 @@
 package api.routes
 
 import api.models.dto.*
+import api.models.enum.CloudinaryFolder
+import api.services.CloudinaryService
 import api.services.FlashcardService
 import api.utils.getLongParamOrRespond
 import api.utils.getUserIdOrRespond
 import api.utils.handleResult
 import io.ktor.http.HttpStatusCode
+import io.ktor.http.content.PartData
+import io.ktor.http.content.forEachPart
 import io.ktor.server.request.receive
+import io.ktor.server.request.receiveMultipart
 import io.ktor.server.response.respond
 import io.ktor.server.routing.*
+import io.ktor.utils.io.readRemaining
+import kotlinx.io.readByteArray
+import kotlinx.serialization.json.Json
 
 fun Route.flashcardRoutes(service: FlashcardService) {
 
@@ -25,9 +33,41 @@ fun Route.flashcardRoutes(service: FlashcardService) {
         // ===== CREATE =====
         post {
             val userId = call.getUserIdOrRespond() ?: return@post
-            val request = call.receive<CreateFlashcardRequest>()
 
-            service.addFlashcard(userId, request).handleResult(
+            val multipart = call.receiveMultipart()
+            var createRequest: CreateFlashcardRequest? = null
+            var flashcardImageBytes: ByteArray? = null
+
+            multipart.forEachPart { part ->
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "data") {
+                            val jsonString = part.value
+                            createRequest = Json.decodeFromString<CreateFlashcardRequest>(jsonString)
+                        }
+                    }
+                    is PartData.FileItem -> {
+                        val fileBytes = part.provider().readRemaining().readByteArray()
+                        when (part.name) {
+                            "flashcardImage" -> flashcardImageBytes = fileBytes
+                        }
+                        part.dispose()
+                    }
+                    else -> part.dispose()
+                }
+            }
+
+            if (createRequest == null) {
+                call.respond(HttpStatusCode.BadRequest, "Thiếu dữ liệu tạo mới")
+            }
+
+            // Xử lý đăng ảnh và cập nhật link ảnh
+            flashcardImageBytes?.let { bytes ->
+                val savedPath = CloudinaryService.uploadImage(bytes, CloudinaryFolder.FLASHCARD.path)
+                createRequest!!.imageUrl = savedPath
+            }
+
+            service.addFlashcard(userId, createRequest!!).handleResult(
                 onSuccess = {
                     call.respond(
                         HttpStatusCode.Created,
@@ -43,9 +83,41 @@ fun Route.flashcardRoutes(service: FlashcardService) {
         // ===== UPDATE =====
         patch {
             val userId = call.getUserIdOrRespond() ?: return@patch
-            val request = call.receive<UpdateFlashcardRequest>()
 
-            service.updateFlashcard(userId, request).handleResult(
+            val multipart = call.receiveMultipart()
+            var updateRequest: UpdateFlashcardRequest? = null
+            var flashcardImageBytes: ByteArray? = null
+
+            multipart.forEachPart { part ->
+                when (part) {
+                    is PartData.FormItem -> {
+                        if (part.name == "data") {
+                            val jsonString = part.value
+                            updateRequest = Json.decodeFromString<UpdateFlashcardRequest>(jsonString)
+                        }
+                    }
+                    is PartData.FileItem -> {
+                        val fileBytes = part.provider().readRemaining().readByteArray()
+                        when (part.name) {
+                            "flashcardImage" -> flashcardImageBytes = fileBytes
+                        }
+                        part.dispose()
+                    }
+                    else -> part.dispose()
+                }
+            }
+
+            if (updateRequest == null) {
+                call.respond(HttpStatusCode.BadRequest, "Thiếu dữ liệu cập nhật")
+            }
+
+            // Xử lý đăng ảnh và cập nhật link ảnh
+            flashcardImageBytes?.let { bytes ->
+                val savedPath = CloudinaryService.uploadImage(bytes, CloudinaryFolder.FLASHCARD.path)
+                updateRequest!!.imageUrl = savedPath
+            }
+
+            service.updateFlashcard(userId, updateRequest!!).handleResult(
                 onSuccess = { success ->
                     call.respond(
                         if (success) HttpStatusCode.OK else HttpStatusCode.NotFound,

@@ -31,7 +31,7 @@ data class CreateFlashcardRequest(
     val transcription: String,
     val typeId: Int,
     val deckId: Long,
-    val imageUrl: String? = null,
+    var imageUrl: String? = null,
     val audioUrl: String? = null,
     val meaning: String,
     val example: String? = null,
@@ -40,11 +40,11 @@ data class CreateFlashcardRequest(
 
 @Serializable
 data class UpdateFlashcardRequest(
-    val flashcardId: Long,
+    var flashcardId: Long,
     val word: String? = null,
     val transcription: String? = null,
     val typeId: Int? = null,
-    val imageUrl: String? = null,
+    var imageUrl: String? = null,
     val audioUrl: String? = null,
     val meaning: String? = null,
     val example: String? = null,

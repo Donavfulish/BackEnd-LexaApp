@@ -10,6 +10,7 @@ import api.models.tables.FlashcardDecksTable
 import api.models.tables.FlashcardResultsTable
 import api.models.tables.FlashcardsTable
 import api.models.tables.PartOfSpeechesTable
+import api.services.CloudinaryService
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
@@ -83,36 +84,56 @@ class FlashcardRepository {
     }
 
     suspend fun updateFlashcard(userId: Int, request: UpdateFlashcardRequest) : Boolean = dbQuery {
-        val checkOwner = (FlashcardsTable innerJoin FlashcardDecksTable)
-            .select {(FlashcardsTable.id eq request.flashcardId) and (FlashcardDecksTable.creatorId eq userId)}
-            .any()
+        val oldFlashcard = (FlashcardsTable innerJoin FlashcardDecksTable)
+            .slice(FlashcardsTable.imageUrl)
+            .select { (FlashcardsTable.id eq request.flashcardId) and (FlashcardDecksTable.creatorId eq userId) }
+            .singleOrNull()
 
-        if(checkOwner) {
-            FlashcardsTable.update({ FlashcardsTable.id eq request.flashcardId }) { statement ->
-                request.word?.let { statement[word] = it }
-                request.transcription?.let { statement[transcription] = it }
-                request.meaning?.let { statement[meaningVi] = it }
-                request.imageUrl?.let { statement[imageUrl] = it }
-                request.example?.let { statement[example] = it }
-                request.partOfSpeechId?.let { statement[partOfSpeechId] = it }
-                request.typeId?.let { statement[type] = api.models.enum.VocabType.entries[it] }
-                statement[updatedAt] = java.time.LocalDateTime.now()
-            } > 0
-         } else {
-            false
+        if (oldFlashcard == null) return@dbQuery false
+
+        val oldImageUrl = oldFlashcard[FlashcardsTable.imageUrl]
+
+        val updatedRows = FlashcardsTable.update({ FlashcardsTable.id eq request.flashcardId }) { statement ->
+            request.word?.let { statement[word] = it }
+            request.transcription?.let { statement[transcription] = it }
+            request.meaning?.let { statement[meaningVi] = it }
+            request.imageUrl?.let { statement[imageUrl] = it } // URL mới từ request
+            request.example?.let { statement[example] = it }
+            request.partOfSpeechId?.let { statement[partOfSpeechId] = it }
+            request.typeId?.let { statement[type] = api.models.enum.VocabType.entries[it] }
+            statement[updatedAt] = java.time.LocalDateTime.now()
         }
+
+        val isSuccess = updatedRows > 0
+
+        if (isSuccess && request.imageUrl != null && oldImageUrl != null) {
+            CloudinaryService.deleteImage(oldImageUrl)
+        }
+
+        isSuccess
     }
 
     suspend fun deleteFlashcard(userId: Int, flashcardId: Long) : Boolean = dbQuery {
-        val checkOwner = (FlashcardsTable innerJoin FlashcardDecksTable)
+        val flashcardData = (FlashcardsTable innerJoin FlashcardDecksTable)
+            .slice(FlashcardsTable.imageUrl)
             .select {
-                (FlashcardsTable.id eq flashcardId) and
-                        (FlashcardDecksTable.creatorId eq userId)
+                (FlashcardsTable.id eq flashcardId) and (FlashcardDecksTable.creatorId eq userId)
             }
-            .any()
-        if(checkOwner){
+            .singleOrNull()
+
+        if (flashcardData != null) {
+            val urlToDelete = flashcardData[FlashcardsTable.imageUrl]
+
             FlashcardResultsTable.deleteWhere { FlashcardResultsTable.flashcardId eq flashcardId }
-            FlashcardsTable.deleteWhere { FlashcardsTable.id eq flashcardId} > 0
+
+            val deletedRows = FlashcardsTable.deleteWhere { FlashcardsTable.id eq flashcardId }
+            val isSuccess = deletedRows > 0
+
+            if (isSuccess && !urlToDelete.isNullOrBlank()) {
+                CloudinaryService.deleteImage(urlToDelete)
+            }
+
+            isSuccess
         } else {
             false
         }
@@ -121,6 +142,7 @@ class FlashcardRepository {
     suspend fun createFlashcard(userId: Int, request: CreateFlashcardRequest) : Long = dbQuery {
         val checkOwner = FlashcardDecksTable.select { (FlashcardDecksTable.id eq request.deckId) and (FlashcardDecksTable.creatorId eq userId) }
             .any()
+
         if(checkOwner){
             FlashcardsTable.insertAndGetId {
                 it[deckId] = request.deckId.toLong()

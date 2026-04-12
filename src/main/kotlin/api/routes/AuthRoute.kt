@@ -15,6 +15,7 @@ import api.models.dto.OtpRequest
 import api.models.dto.OtpVerify
 import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
+import api.models.dto.errorResponse
 import api.models.dto.successResponse
 import api.models.enum.CloudinaryFolder
 import api.models.enum.ProviderType
@@ -69,10 +70,18 @@ fun Route.authRoutes(authService: AuthService) {
 
             val result = authService.login(loginRequest)
 
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(result)
-            )
+            if (result != null) {
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(result, "Đăng nhập thành công")
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    successResponse(null, "Sai email hoặc mật khẩu")
+                )
+            }
+
         }
     }
     route("api/auth/signup") {
@@ -119,10 +128,18 @@ fun Route.authRoutes(authService: AuthService) {
 
             val result = authService.signup(signupRequest!!)
 
-            call.respond(
-                HttpStatusCode.OK,
-                successResponse(result, "Đăng ký thành công")
-            )
+            if (result.ok) {
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(result, "Đăng ký thành công")
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    errorResponse(result.message ?: "Đăng ký thất bại")
+                )
+            }
+
         }
     }
 

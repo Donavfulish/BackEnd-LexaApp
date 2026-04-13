@@ -89,7 +89,8 @@ class SpeakingDayRepository {
                     speakingDayId = dayRow[SpeakingDaysTable.id].value,
                     title = dayRow[SpeakingDaysTable.title] ?: "",
                     completed = completed,
-                    paragraphNum = totalParas.toInt()
+                    paragraphNum = totalParas.toInt(),
+                    order = dayRow[SpeakingDaysTable.dayOrder]!!
                 )
             }
         SpeakingDayPagination(

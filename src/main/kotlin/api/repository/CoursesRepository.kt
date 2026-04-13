@@ -299,7 +299,7 @@ class CoursesRepository {
             favorite_user_count = favoriteUserCount,
             description = row[CoursesTable.description],
             deckId = row[CoursesTable.deckId]?.value ?: null,
-            list_speaking_day = list_speaking_day.data,
+            list_speaking_day = list_speaking_day,
             list_topic = list_topic
         )
     }

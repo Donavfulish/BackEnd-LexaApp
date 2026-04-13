@@ -34,9 +34,10 @@ fun Route.deckRoutes(service: DeckService) {
 
         // CREATE
         post {
+            val userId = call.getUserIdOrRespond() ?: return@post
             val request = call.receive<CreateDeckRequest>()
 
-            service.addDeck(request).handleResult(
+            service.addDeck(userId,request).handleResult(
                 onSuccess = {
                     call.respond(
                         HttpStatusCode.Created,

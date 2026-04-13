@@ -37,10 +37,10 @@ import java.time.LocalDateTime
 
 class DeckRepository {
 
-    suspend fun createDeck(request: CreateDeckRequest): Long = dbQuery {
+    suspend fun createDeck(userId: Int, request: CreateDeckRequest): Long = dbQuery {
         FlashcardDecksTable.insertAndGetId {
             it[title] = request.title
-            it[creatorId] = request.creatorId
+            it[creatorId] = userId
             it[privacy] = api.models.enum.PrivacyType.PUBLIC
         }.value
     }

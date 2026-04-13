@@ -19,7 +19,6 @@ data class DeckDto(
 @Serializable
 data class CreateDeckRequest(
     val title: String,
-    val creatorId: Int,
 )
 
 @Serializable

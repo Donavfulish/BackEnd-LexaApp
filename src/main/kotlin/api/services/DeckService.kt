@@ -58,13 +58,13 @@ class DeckService(
         courseRepository.getFavoriteCourses(userId, searchInfo, nextCursor)
     }
 
-    suspend fun addDeck(request: CreateDeckRequest) : Result<Long>{
+    suspend fun addDeck(userId: Int, request: CreateDeckRequest) : Result<Long>{
         if (request.title.isBlank()) {
             return Result.failure(Exception("Tên bộ từ vựng không được để trống"))
         }
 
         return try {
-            val id = deckRepository.createDeck(request);
+            val id = deckRepository.createDeck(userId, request);
             Result.success(id)
         } catch (e: Exception) {
             Result.failure(e)

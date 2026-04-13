@@ -96,10 +96,8 @@ class AuthRepository {
     }
 
     suspend fun storeRefreshToken(_userId: Int, _refreshToken: String) = dbQuery {
-        // Xóa token cũ của user này (nếu muốn mỗi user chỉ có 1 phiên đăng nhập)
         RefreshTokensTable.deleteWhere { userId eq _userId }
 
-        // Chèn token mới
         RefreshTokensTable.insert {
             it[userId] = _userId
             it[tokenHash] = _refreshToken
@@ -108,7 +106,6 @@ class AuthRepository {
     }
 
     suspend fun validateRefreshToken(userIdParam: Int, token: String): Boolean = dbQuery {
-        // Tìm dòng có userId và token khớp hoàn toàn
         val exists = RefreshTokensTable
             .select {
                 (RefreshTokensTable.userId eq userIdParam) and (RefreshTokensTable.tokenHash eq token)
@@ -117,7 +114,6 @@ class AuthRepository {
 
         if (exists == null) return@dbQuery false
 
-        // Kiểm tra thời hạn (expiry)
         val expiry = exists[RefreshTokensTable.expiresAt]
         expiry.isAfter(LocalDateTime.now())
     }

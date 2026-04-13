@@ -8,22 +8,11 @@ import api.models.dto.OAuthRegisterRequest
 import api.models.dto.RefreshRequest
 import api.models.dto.SignupRequest
 import api.models.dto.UserInfo
-import api.models.dto.UserResponse
 import api.models.enum.ProviderType
-import api.models.tables.UsersTable
 import api.repository.AuthRepository
-import api.repository.CoursesRepository
 import api.utils.AuthUtil
 import api.utils.AuthUtil.toResponse
-import io.ktor.http.HttpStatusCode
-import org.jetbrains.exposed.sql.ResultRow
-import com.google.api.client.googleapis.auth.oauth2.GoogleIdTokenVerifier
-import com.google.api.client.http.javanet.NetHttpTransport
-import com.google.api.client.json.gson.GsonFactory
-import com.lexa.api.config.DatabaseFactory.dbQuery
 import io.github.cdimascio.dotenv.dotenv
-import org.apache.commons.logging.Log
-import java.util.Properties
 
 val dotenv = dotenv()
 
@@ -34,7 +23,8 @@ class AuthService (
         val email = loginRequest.email
         val password = loginRequest.password
 
-        // 1. Tìm user theo email
+        // --- A. KIỂM TRA THÔNG TIN ĐĂNG NHẬP ---
+        // 1. Kiểm tra tài khoản email này được đăng ký chưa
         val user = authRepository.findByEmail(email)
             ?: return AuthResult(false, "Email không tồn tại")
 
@@ -44,8 +34,11 @@ class AuthService (
             return AuthResult(false, "Email hoặc mật khẩu không chính xác")
         }
 
+        println("DEBUG: Tài khoản đăng nhập:")
         println(user)
-        // 3. Tạo cặp Token mới
+
+        // --- B. RESPONSE THÔNG TIN USER + TOKEN ---
+        // 3. Tạo cặp token mới
         val accessToken = JwtConfig.generateAccessToken(user)
         val refreshToken = JwtConfig.generateRefreshToken(user)
 
@@ -56,22 +49,22 @@ class AuthService (
     }
 
     suspend fun signup(signupRequest: SignupRequest): AuthResult {
+        // --- A. KIỂM TRA THÔNG TIN ĐĂNG KÝ ---
         // 1. Kiểm tra email đã tồn tại chưa
         if (authRepository.existsByEmail(signupRequest.email)) {
             return AuthResult(false, "Email đã tồn tại")
         }
-
-        // 2. Băm mật khẩu
         val hashedPassword = AuthUtil.hash(signupRequest.password)
 
-        // 3. Lưu vào database
+        // 2. --- Lưu vào database ---
         val user = authRepository.createUser(signupRequest, hashedPassword)
 
-        // 4. Lấy refreshToken + tạo accessToken
+        // B. RESPONSE THÔNG TIN USER + TOKEN
+        // 3. Lấy refreshToken + tạo accessToken
         val accessToken = JwtConfig.generateAccessToken(user)
         val refreshToken = JwtConfig.generateRefreshToken(user)
 
-        // 5. Lưu refreshToken vào database
+        // 4. Lưu refreshToken vào database
         authRepository.storeRefreshToken(user.id, refreshToken)
 
         return AuthResult(true, "Đăng ký thành công", user.id, user.toResponse(), accessToken, refreshToken)
@@ -93,26 +86,24 @@ class AuthService (
     suspend fun refreshAccessToken(refreshRequest: RefreshRequest): AuthResult  {
         val refreshToken = refreshRequest.refreshToken
         try {
-            // 1. Giải mã token để lấy thông tin (chưa check hết hạn vì RefreshToken thường sống lâu)
+            // --- A. KIỂM TRA REFRESH TOKEN GỬI LÊN ---
+            // 1. Giải mã token, kiểm tra điều kiện cần
             val decodedJWT = JwtConfig.verifier.verify(refreshToken)
             val userId = decodedJWT.getClaim("id").asInt()
             val type = decodedJWT.getClaim("type").asString()
 
-            // 2. Kiểm tra xem có đúng là loại token "refresh" không
             if (type != "refresh") {
                 return AuthResult(false, "Loại token không hợp lệ")
             }
 
-            // 3. Kiểm tra tính hợp lệ trong Database
+            // 2. Kiểm tra tính hợp lệ trong Database
             val isValidInDb = authRepository.validateRefreshToken(userId, refreshToken)
             if (!isValidInDb) {
                 return AuthResult(false, "Refresh Token không tồn tại hoặc đã hết hạn")
             }
 
-            // 4. Tìm thông tin User để tạo AccessToken mới
+            // --- B. RESPONSE ACCESS TOKEN MỚI ---
             val user = authRepository.findById(userId) ?: return AuthResult(false, "User không tồn tại")
-
-            // 5. Tạo AccessToken mới (giữ nguyên RefreshToken cũ hoặc tạo mới tùy bạn)
             val newAccessToken = JwtConfig.generateAccessToken(user)
 
             return AuthResult(
@@ -186,7 +177,7 @@ class AuthService (
     }
 
     suspend fun signupOAuth(registerRequest: OAuthRegisterRequest, oauthSub: String): AuthResult {
-        println("sub: $oauthSub, provider: ${registerRequest.provider.toString()}")
+        println("DEBUG: OAuth sub: $oauthSub, provider: ${registerRequest.provider.toString()}")
         val existedUser = authRepository.getUserFromOAuth(oauthSub, registerRequest.email, registerRequest.provider)
 
         if (existedUser != null) return AuthResult(

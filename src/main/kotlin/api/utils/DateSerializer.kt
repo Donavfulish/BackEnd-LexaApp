@@ -12,7 +12,7 @@ import java.util.Date
 
 // Tạo một Object để cấu hình cách format Date
 object DateSerializer : KSerializer<Date> {
-    private val dateFormat = SimpleDateFormat("yyyy-MM-dd") // Format bạn muốn trả về
+    private val dateFormat = SimpleDateFormat("yyyy-MM-dd")
 
     override val descriptor = PrimitiveSerialDescriptor("Date", PrimitiveKind.STRING)
 

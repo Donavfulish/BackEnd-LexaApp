@@ -144,7 +144,7 @@ fun Route.authRoutes(authService: AuthService) {
     }
 
     route("api/auth/check-auth") {
-        authenticate("auth-jwt") { // Bọc phương thức trong hàm này để xác thực token
+        authenticate("auth-jwt") {
             get {
                 val userId = call.getUserId()
                 val userRole = call.getUserRole()
@@ -174,10 +174,6 @@ fun Route.authRoutes(authService: AuthService) {
                 call.respond(HttpStatusCode.Unauthorized, result)
             }
         }
-    }
-
-    route("/api/auth/logout") {
-
     }
 
     secureRoute("/api/auth") {
@@ -216,7 +212,7 @@ fun Route.authRoutes(authService: AuthService) {
 
     authenticate("oauth-google") {
         get("/api/auth/google/login") {
-            // Ktor sẽ tự động redirect sang Google sau khi block này chạy xong
+            // Ktor sẽ tự động redirect sang Google Callback sau khi block này chạy xong
         }
 
         get("/api/auth/oauth/google-callback") {
@@ -259,7 +255,7 @@ fun Route.authRoutes(authService: AuthService) {
             val state = principal!!.state ?: ""
             val baseRedirect = redirects.remove(state) ?: "lexa://auth-success"
 
-            // Lưu ý: encode URL các thành phần như name hoặc email để tránh lỗi ký tự đặc biệt
+            // Encode URL các thành phần như name hoặc email để tránh lỗi ký tự đặc biệt
             val finalUrl = URLBuilder(baseRedirect).apply {
                 parameters.append("token", googleAccessToken)
                 parameters.append("email", oauthUserInfo.email)
@@ -286,7 +282,6 @@ fun Route.authRoutes(authService: AuthService) {
                 if (result.ok) {
                     call.respond(HttpStatusCode.OK, successResponse(result, result.message ?: "Thành công"))
                 } else {
-                    // Trả về 401 để Frontend biết đường đá người dùng ra màn Login
                     call.respond(
                         HttpStatusCode.BadRequest, successResponse(result, result.message?: "Thất bại")
                     )
@@ -296,8 +291,6 @@ fun Route.authRoutes(authService: AuthService) {
                 val googleSub = call.getOAuthSub()
 
                 if (googleSub == null) { call.respond(HttpStatusCode.Unauthorized, mapOf("sub" to googleSub)) }
-
-                //val registerRequest = call.receive<OAuthRegisterRequest>()
 
                 val multipart = call.receiveMultipart()
                 var registerRequest: OAuthRegisterRequest? = null
@@ -347,7 +340,6 @@ fun Route.authRoutes(authService: AuthService) {
                         successResponse(result,result.message?: "Thành công")
                     )
                 } else {
-                    // Trả về 401 để Frontend biết đường đá người dùng ra màn Login
                     call.respond(
                         HttpStatusCode.Unauthorized, successResponse(result, result.message?: "Thất bại")
                     )
@@ -375,6 +367,7 @@ fun Route.authRoutes(authService: AuthService) {
                 // Cách 1: Chờ gửi xong mới trả về response (An toàn nhưng chậm hơn chút)
                 authService.sendOtpEmail(request.email, otpCode)
 
+                // TODO cần switch qua cách 2
                 // Cách 2: Gửi ngầm và trả về response ngay (Nhanh, cần xử lý log lỗi riêng)
                 // launch(Dispatchers.IO) { sendOtpEmail(request.email, otpCode) }
 

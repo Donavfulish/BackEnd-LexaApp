@@ -11,7 +11,8 @@ data class ShortSpeakingDayDto(
     val speakingDayId: Long,
     val title: String,
     val completed: Int,
-    val paragraphNum: Int
+    val paragraphNum: Int,
+    val order: Long
 )
 
 @Serializable

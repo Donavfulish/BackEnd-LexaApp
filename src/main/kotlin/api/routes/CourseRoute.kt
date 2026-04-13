@@ -120,24 +120,18 @@ fun Route.courseRoutes(service: CoursesService, speakingDayService: SpeakingDayS
             }
         }
 
-        get("/{courseId}/speaking-day") {
+        // Đã sửa speaking-day thành speaking-days và lấy next_order đúng cách
+        get("/{courseId}/speaking-days") {
             val userId = call.getUserIdOrRespond() ?: return@get
             val courseId = call.getLongParamOrRespond("courseId") ?: return@get
-            val nextOrder = call.getLongParamOrRespond("nextOrder") ?: null
+            val nextOrder = call.request.queryParameters["next_order"]?.toLongOrNull()
 
             val data = speakingDayService.getSpeakingDays(userId, courseId, nextOrder)
 
-            if (data != null) {
-                call.respond<ApiResponse<SpeakingDayPagination>>(
-                    HttpStatusCode.OK,
-                    successResponse(data, "Chi tiết khóa học")
-                )
-            } else {
-                call.respond(
-                    HttpStatusCode.NotFound,
-                    errorResponse("Không tìm thấy hoặc private")
-                )
-            }
+            call.respond(
+                HttpStatusCode.OK,
+                successResponse(data, "Danh sách bài học")
+            )
         }
     }
 

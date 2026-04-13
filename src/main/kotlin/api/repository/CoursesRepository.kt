@@ -195,7 +195,7 @@ class CoursesRepository {
     suspend fun getFavoriteCourses(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllCoursePaginationResponse = dbQuery {
         val baseQuery = UserFavoriteCoursesTable
             .innerJoin(CoursesTable, { UserFavoriteCoursesTable.courseId }, { CoursesTable.id })
-            .innerJoin(UsersTable, { UserFavoriteCoursesTable.userId }, { UsersTable.id })
+            .innerJoin(UsersTable, { CoursesTable.creatorId }, { UsersTable.id })
             .leftJoin(TopicsTable, { CoursesTable.topicId }, { TopicsTable.id })
             .select { (UserFavoriteCoursesTable.userId eq userId) and (CoursesTable.privacy eq PrivacyType.PUBLIC) }
         executeCoursePagination(userId, searchInfo, nextCursor, baseQuery, isFavoriteList = true)

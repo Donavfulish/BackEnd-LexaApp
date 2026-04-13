@@ -5,6 +5,7 @@ import com.zaxxer.hikari.HikariDataSource
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 import io.github.cdimascio.dotenv.dotenv
+import kotlinx.coroutines.Dispatchers
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.transactions.transaction
 
@@ -37,6 +38,6 @@ object DatabaseFactory {
 
     // Hàm tiện ích để bọc các câu lệnh SQL chạy bất đồng bộ (chạy trong coroutine thay vì block main thread của ktor)
     suspend fun <T> dbQuery(block: suspend () -> T): T =
-        newSuspendedTransaction { block() }
+        newSuspendedTransaction(Dispatchers.IO) { block() }
 
 }

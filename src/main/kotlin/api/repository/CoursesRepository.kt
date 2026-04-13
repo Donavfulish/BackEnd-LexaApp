@@ -499,7 +499,6 @@ class CoursesRepository {
             it[privacy] = api.models.enum.PrivacyType.valueOf(course.privacy)
             it[thumbnailUrl] = course.thumbnailUrl
             it[creatorId] = userId
-
         }.value
     }
     suspend fun editCourse(courseId: Long, userId: Int, course: EditCourseRequest): Boolean = dbQuery {

@@ -1,4 +1,4 @@
-package api.config
+    package api.config
 
 import io.github.cdimascio.dotenv.dotenv
 import jakarta.mail.*
@@ -31,7 +31,7 @@ object MailFactory {
             put("mail.smtp.starttls.enable", "true")
             put("mail.smtp.host", config.host)
             put("mail.smtp.port", config.port)
-            put("mail.smtp.port", config.port.toString()) // Nên để String cho chắc chắn
+            put("mail.smtp.port", config.port.toString())
 
             // Thêm dòng này để fix lỗi WRONG_VERSION_NUMBER
             put("mail.smtp.ssl.protocols", "TLSv1.2")
@@ -55,7 +55,7 @@ object MailFactory {
             Transport.send(message)
         } catch (e: Exception) {
             e.printStackTrace()
-            throw e // Re-throw để Controller xử lý lỗi nếu cần
+            throw e
         }
     }
 }

@@ -7,10 +7,8 @@ import org.slf4j.event.Level
 
 fun Application.configureMonitoring() {
     install(CallLogging) {
-        // Đặt mức độ log là INFO để theo dõi các luồng bình thường
         level = Level.INFO
 
-        // Bạn có thể tùy chỉnh định dạng dòng log in ra cho dễ đọc
         format { call ->
             val status = call.response.status()
             val httpMethod = call.request.httpMethod.value

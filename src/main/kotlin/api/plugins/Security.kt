@@ -40,7 +40,7 @@ fun Application.configureSecurity(httpClient: HttpClient) {
     }
 
     install(Authentication) {
-        jwt("auth-jwt") { // Đây chính là "middleware"
+        jwt("auth-jwt") {
             verifier(JwtConfig.verifier)
             validate { credential ->
                 val type = credential.payload.getClaim("type").asString()
@@ -61,14 +61,9 @@ fun Application.configureSecurity(httpClient: HttpClient) {
                 )
             }
         }
-        jwt("auth-jwt-oauth") { // Đây chính là "middleware"
+        jwt("auth-jwt-oauth") {
             verifier(JwtConfig.verifier)
             validate { credential ->
-                // TEST ==================
-                val authHeader = request.parseAuthorizationHeader()
-                println("SERVER_LOG: Raw Header -> $authHeader")
-                // =======================
-
                 val type = credential.payload.getClaim("type").asString()
                 if (credential.payload.subject != null && type == "oauth-access") {
                     JWTPrincipal(credential.payload)

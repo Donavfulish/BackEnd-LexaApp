@@ -46,8 +46,4 @@ fun Application.configureRouting() {
             enableAutoHeadResponse()
         }
     }
-
-//    routing {
-//        aRoutes(aService = AService(ARespository()))
-//    }
 }

@@ -8,7 +8,7 @@ enum class PrivacyType { PUBLIC, PRIVATE }
 enum class ProgressStatus { REMEMBER, FORGOTTEN }
 enum class ProviderType { GOOGLE, FACEBOOK, GITHUB }
 enum class UserRole { TEACHER, STUDENT }
-enum class VocabType { A1, A2, B1, B2, C1, C2 }
+enum class VocabType { A0, A1, A2, B1, B2, C1, C2 }
 
 enum class SortBy(val str: String) {
     TITLE("title"),

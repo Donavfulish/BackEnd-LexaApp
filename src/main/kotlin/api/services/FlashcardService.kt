@@ -1,8 +1,10 @@
 package api.services
 
+import api.models.dto.AllFlashcardPaginationResponse
 import api.models.dto.CreateFlashcardRequest
 import api.models.dto.DetailFlashcard
 import api.models.dto.DetailFlashcardWithResult
+import api.models.dto.SearchInfo
 import api.models.dto.UpdateFlashcardRequest
 import api.models.dto.UpdateFlashcardResultRequest
 import api.repository.FlashcardRepository
@@ -10,8 +12,8 @@ import api.repository.FlashcardRepository
 class FlashcardService(
     private val flashcardRepository: FlashcardRepository
 ) {
-    suspend fun getAllFlashcard(deckId: Long): List<DetailFlashcard>{
-        return flashcardRepository.getAllFlashcard(deckId);
+    suspend fun getAllFlashcard(deckId: Long, searchInfo: SearchInfo, nextCursor: Long?): AllFlashcardPaginationResponse{
+        return flashcardRepository.getAllFlashcard(deckId, searchInfo, nextCursor);
     }
 
     suspend fun getAllFlashcardWithResult(deckId: Long, userId: Int): List<DetailFlashcardWithResult> {

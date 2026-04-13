@@ -1,32 +1,106 @@
 package api.repository
 
+import api.models.dto.AllCoursePaginationResponse
+import api.models.dto.AllFlashcardPaginationResponse
 import api.models.dto.CreateFlashcardRequest
 import api.models.dto.DetailFlashcard
 import api.models.dto.DetailFlashcardWithResult
+import api.models.dto.SearchInfo
 import api.models.dto.UpdateFlashcardRequest
 import api.models.dto.UpdateFlashcardResultRequest
+import api.models.enum.OrderBy
 import api.models.enum.ProgressStatus
+import api.models.enum.SortBy
+import api.models.tables.CoursesTable
 import api.models.tables.FlashcardDecksTable
 import api.models.tables.FlashcardResultsTable
 import api.models.tables.FlashcardsTable
 import api.models.tables.PartOfSpeechesTable
+import api.models.tables.SearchEngine
 import api.services.CloudinaryService
 import com.lexa.api.config.DatabaseFactory.dbQuery
+import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
 import org.jetbrains.exposed.sql.and
+import org.jetbrains.exposed.sql.andWhere
 import org.jetbrains.exposed.sql.deleteWhere
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.insertAndGetId
 import org.jetbrains.exposed.sql.leftJoin
+import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.update
+import java.time.LocalDateTime
 
 class FlashcardRepository {
-    suspend fun getAllFlashcard(deckId: Long): List<DetailFlashcard> = dbQuery {
-        (FlashcardsTable innerJoin PartOfSpeechesTable)
+    suspend fun getAllFlashcard(deckId: Long, searchInfo: SearchInfo, nextCursor: Long?): AllFlashcardPaginationResponse = dbQuery {
+        val query = searchInfo.query ?: ""
+        val sortBy = SortBy.fromString(searchInfo.sortBy)
+        val orderBy = OrderBy.fromString(searchInfo.order)
+        val limit = searchInfo.limit ?: 10
+        val lastId = nextCursor
+
+        val baseQuery = (FlashcardsTable innerJoin PartOfSpeechesTable)
             .select { FlashcardsTable.deckId eq deckId }
-            .map { row ->
+
+        var isRevelant = false
+        if (searchInfo.sortBy.isNullOrEmpty() and !searchInfo.query.isNullOrEmpty()) {
+            isRevelant = true
+        }
+
+        var queryList = if (query.isNotEmpty()) {
+            SearchEngine.searchAllFlashcard(query, deckId)
+        } else null
+
+        if (queryList != null && queryList.isEmpty()) {
+            AllFlashcardPaginationResponse(emptyList(), searchInfo, null, 0)
+        }
+
+        val sortColumn = when (sortBy) {
+            SortBy.CREATED -> FlashcardsTable.createdAt
+            SortBy.TITLE -> FlashcardsTable.word
+        }
+
+        val lastValue = if (lastId != null && queryList.isNullOrEmpty()) {
+            FlashcardsTable.slice(sortColumn).select { FlashcardsTable.id eq lastId }.singleOrNull()?.get(sortColumn)?.toString()
+        } else null
+
+        var totalCount = baseQuery.count()
+        val sortOrder = if (orderBy == OrderBy.ASC) SortOrder.ASC else SortOrder.DESC
+
+        if (!queryList.isNullOrEmpty()) {
+            totalCount = queryList!!.size.toLong()
+            if (lastId != null) {
+                val startIndex = queryList!!.indexOfFirst { it.id == lastId }
+                queryList = queryList!!.subList(startIndex + 1, if (startIndex + 10 > queryList!!.size) queryList!!.size else startIndex + 11)
+            } else {
+                queryList = queryList!!.subList(0, if (10 > queryList!!.size) queryList!!.size else 10)
+            }
+            baseQuery.andWhere { FlashcardsTable.id inList queryList!!.map { it.id } }
+        }
+
+        if (lastId != null && lastValue != null && !isRevelant) {
+            baseQuery.andWhere {
+                val lastTime = if (sortBy == SortBy.CREATED) LocalDateTime.parse(lastValue) else null
+                if (sortOrder == SortOrder.DESC) {
+                    when (sortBy) {
+                        SortBy.CREATED -> (FlashcardsTable.createdAt less lastTime!!) or ((FlashcardsTable.createdAt eq lastTime) and (FlashcardsTable.id less lastId))
+                        SortBy.TITLE -> (FlashcardsTable.word less lastValue) or ((FlashcardsTable.word eq lastValue) and (FlashcardsTable.id less lastId))
+                    }
+                } else {
+                    when (sortBy) {
+                        SortBy.CREATED -> (FlashcardsTable.createdAt greater lastTime!!) or ((FlashcardsTable.createdAt eq lastTime) and (FlashcardsTable.id greater lastId))
+                        SortBy.TITLE -> (FlashcardsTable.word greater lastValue) or ((FlashcardsTable.word eq lastValue) and (FlashcardsTable.id greater lastId))
+                    }
+                }
+            }
+        }
+
+        if (!isRevelant)
+            baseQuery.orderBy(sortColumn to sortOrder, FlashcardsTable.id to sortOrder)
+                .limit(limit)
+        val results = baseQuery.limit(limit).map{ row ->
                 DetailFlashcard(
                     id = row[FlashcardsTable.id].value.toInt(),
                     word = row[FlashcardsTable.word],
@@ -37,9 +111,42 @@ class FlashcardRepository {
                     audioUrl = row[FlashcardsTable.audioUrl],
                     meaning = row[FlashcardsTable.meaningVi] ?: "",
                     example = row[FlashcardsTable.example],
-                    partOfSpeech = row[PartOfSpeechesTable.name] ?: "",)
-            }
+                    partOfSpeech = row[PartOfSpeechesTable.name] ?: "")
+        }
+        val finalResults = if (isRevelant && queryList != null) {
+            val idOrder = queryList!!.map { it.id }.withIndex().associate { it.value to it.index }
+            results.sortedBy { idOrder[it.id.toLong()] }
+        } else results
+
+        val lastItem = finalResults.lastOrNull()
+        val nextCursorRes = if (finalResults.size == limit && lastItem != null) lastItem.id else null
+
+        println("DEBUG: Results count = ${finalResults.size}")
+        println("DEBUG: searchInfo = $searchInfo")
+        println("DEBUG: nextCursorRes = $nextCursorRes")
+        println("DEBUG: totalCount = $totalCount")
+
+
+        AllFlashcardPaginationResponse(finalResults, searchInfo, nextCursorRes?.toLong(), totalCount)
     }
+
+//    suspend fun getAllFlashcard(deckId: Long): List<DetailFlashcard> = dbQuery {
+//        (FlashcardsTable innerJoin PartOfSpeechesTable)
+//            .select { FlashcardsTable.deckId eq deckId }
+//            .map { row ->
+//                DetailFlashcard(
+//                    id = row[FlashcardsTable.id].value.toInt(),
+//                    word = row[FlashcardsTable.word],
+//                    transcription = row[FlashcardsTable.transcription] ?: "",
+//                    type = row[FlashcardsTable.type]?.name ?: "",
+//                    deckId = row[FlashcardsTable.deckId].value.toInt(),
+//                    imageUrl = row[FlashcardsTable.imageUrl],
+//                    audioUrl = row[FlashcardsTable.audioUrl],
+//                    meaning = row[FlashcardsTable.meaningVi] ?: "",
+//                    example = row[FlashcardsTable.example],
+//                    partOfSpeech = row[PartOfSpeechesTable.name] ?: "",)
+//            }
+//    }
 
     suspend fun getAllFlashcardWithResult(deckId: Long, userId: Int): List<DetailFlashcardWithResult> = dbQuery {
         (FlashcardsTable

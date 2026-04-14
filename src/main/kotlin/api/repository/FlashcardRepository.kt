@@ -2,6 +2,7 @@ package api.repository
 
 import api.models.dto.AllCoursePaginationResponse
 import api.models.dto.AllFlashcardPaginationResponse
+import api.models.dto.AllFlashcardResultPaginationResponse
 import api.models.dto.CreateFlashcardRequest
 import api.models.dto.DetailFlashcard
 import api.models.dto.DetailFlashcardWithResult
@@ -19,6 +20,7 @@ import api.models.tables.PartOfSpeechesTable
 import api.models.tables.SearchEngine
 import api.services.CloudinaryService
 import com.lexa.api.config.DatabaseFactory.dbQuery
+import org.jetbrains.exposed.sql.Query
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
@@ -32,17 +34,24 @@ import org.jetbrains.exposed.sql.or
 import org.jetbrains.exposed.sql.select
 import org.jetbrains.exposed.sql.update
 import java.time.LocalDateTime
+import kotlin.collections.get
+import kotlin.text.toInt
+import kotlin.text.toLong
 
 class FlashcardRepository {
-    suspend fun getAllFlashcard(deckId: Long, searchInfo: SearchInfo, nextCursor: Long?): AllFlashcardPaginationResponse = dbQuery {
+    private suspend fun executeFlashcardPagination(
+        deckId: Long,
+        searchInfo: SearchInfo,
+        nextCursor: Long?,
+        baseQuery: Query,
+        isResult: Boolean = false,
+    ): Any{
         val query = searchInfo.query ?: ""
         val sortBy = SortBy.fromString(searchInfo.sortBy)
         val orderBy = OrderBy.fromString(searchInfo.order)
         val limit = searchInfo.limit ?: 10
         val lastId = nextCursor
 
-        val baseQuery = (FlashcardsTable innerJoin PartOfSpeechesTable)
-            .select { FlashcardsTable.deckId eq deckId }
 
         var isRevelant = false
         if (searchInfo.sortBy.isNullOrEmpty() and !searchInfo.query.isNullOrEmpty()) {
@@ -100,7 +109,32 @@ class FlashcardRepository {
         if (!isRevelant)
             baseQuery.orderBy(sortColumn to sortOrder, FlashcardsTable.id to sortOrder)
                 .limit(limit)
+
         val results = baseQuery.limit(limit).map{ row ->
+            if(isResult){
+                    val status = row[FlashcardResultsTable.status]
+                    val finalStatus = when {
+                        status == null -> ProgressStatus.FORGOTTEN
+                        status == ProgressStatus.FORGOTTEN -> ProgressStatus.FORGOTTEN
+                        else -> status
+                    }
+
+                    DetailFlashcardWithResult(
+                        flashCard = DetailFlashcard(
+                            id = row[FlashcardsTable.id].value.toInt(),
+                            word = row[FlashcardsTable.word],
+                            transcription = row[FlashcardsTable.transcription] ?: "",
+                            type = row[FlashcardsTable.type]?.name ?: "",
+                            deckId = row[FlashcardsTable.deckId].value.toInt(),
+                            imageUrl = row[FlashcardsTable.imageUrl],
+                            audioUrl = row[FlashcardsTable.audioUrl],
+                            meaning = row[FlashcardsTable.meaningVi] ?: "",
+                            example = row[FlashcardsTable.example],
+                            partOfSpeech = row[PartOfSpeechesTable.name] ?: "",
+                        ),
+                        result = finalStatus
+                    )
+            } else{
                 DetailFlashcard(
                     id = row[FlashcardsTable.id].value.toInt(),
                     word = row[FlashcardsTable.word],
@@ -112,44 +146,46 @@ class FlashcardRepository {
                     meaning = row[FlashcardsTable.meaningVi] ?: "",
                     example = row[FlashcardsTable.example],
                     partOfSpeech = row[PartOfSpeechesTable.name] ?: "")
+            }
         }
         val finalResults = if (isRevelant && queryList != null) {
             val idOrder = queryList!!.map { it.id }.withIndex().associate { it.value to it.index }
-            results.sortedBy { idOrder[it.id.toLong()] }
+            results.sortedBy { item ->
+                val id = if(item is DetailFlashcard) item.id else (item as DetailFlashcardWithResult).flashCard.id
+                idOrder[id.toLong()] }
         } else results
 
         val lastItem = finalResults.lastOrNull()
-        val nextCursorRes = if (finalResults.size == limit && lastItem != null) lastItem.id else null
+        val nextCursorRes = if (finalResults.size == limit && lastItem != null) {
+            if(lastItem is DetailFlashcard){
+                lastItem.id
+            } else {
+                (lastItem as DetailFlashcardWithResult).flashCard.id
+            }
+        }
+        else null
 
-        println("DEBUG: Results count = ${finalResults.size}")
-        println("DEBUG: searchInfo = $searchInfo")
-        println("DEBUG: nextCursorRes = $nextCursorRes")
-        println("DEBUG: totalCount = $totalCount")
+        return if(isResult)
+        {
+            AllFlashcardResultPaginationResponse(finalResults as List<DetailFlashcardWithResult>, searchInfo, nextCursorRes?.toLong(), totalCount)
+        } else
+        {
+            AllFlashcardPaginationResponse(finalResults as List<DetailFlashcard>, searchInfo, nextCursorRes?.toLong(), totalCount)
+        }
 
-
-        AllFlashcardPaginationResponse(finalResults, searchInfo, nextCursorRes?.toLong(), totalCount)
     }
-
-//    suspend fun getAllFlashcard(deckId: Long): List<DetailFlashcard> = dbQuery {
-//        (FlashcardsTable innerJoin PartOfSpeechesTable)
-//            .select { FlashcardsTable.deckId eq deckId }
-//            .map { row ->
-//                DetailFlashcard(
-//                    id = row[FlashcardsTable.id].value.toInt(),
-//                    word = row[FlashcardsTable.word],
-//                    transcription = row[FlashcardsTable.transcription] ?: "",
-//                    type = row[FlashcardsTable.type]?.name ?: "",
-//                    deckId = row[FlashcardsTable.deckId].value.toInt(),
-//                    imageUrl = row[FlashcardsTable.imageUrl],
-//                    audioUrl = row[FlashcardsTable.audioUrl],
-//                    meaning = row[FlashcardsTable.meaningVi] ?: "",
-//                    example = row[FlashcardsTable.example],
-//                    partOfSpeech = row[PartOfSpeechesTable.name] ?: "",)
-//            }
-//    }
-
-    suspend fun getAllFlashcardWithResult(deckId: Long, userId: Int): List<DetailFlashcardWithResult> = dbQuery {
-        (FlashcardsTable
+    suspend fun getAllFlashcard(deckId: Long, searchInfo: SearchInfo, nextCursor: Long?): AllFlashcardPaginationResponse = dbQuery {
+        val baseQuery = (FlashcardsTable innerJoin PartOfSpeechesTable)
+            .select { FlashcardsTable.deckId eq deckId }
+        executeFlashcardPagination(
+            deckId,
+            searchInfo,
+            nextCursor,
+            baseQuery
+            ) as AllFlashcardPaginationResponse
+    }
+    suspend fun getAllFlashcardWithResult(deckId: Long, userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllFlashcardResultPaginationResponse = dbQuery {
+        val baseQuery = (FlashcardsTable
             .innerJoin (PartOfSpeechesTable)
             .leftJoin(
                 FlashcardResultsTable,
@@ -161,33 +197,13 @@ class FlashcardRepository {
             .select {
                 FlashcardsTable.deckId eq deckId
             }
-            .map { row ->
-
-                val status = row[FlashcardResultsTable.status]
-
-                val finalStatus = when {
-                    status == null -> ProgressStatus.FORGOTTEN
-                    status == ProgressStatus.FORGOTTEN -> ProgressStatus.FORGOTTEN
-                    else -> status
-                }
-
-
-                DetailFlashcardWithResult(
-                    flashCard = DetailFlashcard(
-                        id = row[FlashcardsTable.id].value.toInt(),
-                        word = row[FlashcardsTable.word],
-                        transcription = row[FlashcardsTable.transcription] ?: "",
-                        type = row[FlashcardsTable.type]?.name ?: "",
-                        deckId = row[FlashcardsTable.deckId].value.toInt(),
-                        imageUrl = row[FlashcardsTable.imageUrl],
-                        audioUrl = row[FlashcardsTable.audioUrl],
-                        meaning = row[FlashcardsTable.meaningVi] ?: "",
-                        example = row[FlashcardsTable.example],
-                        partOfSpeech = row[PartOfSpeechesTable.name] ?: "",
-                        ),
-                    result = finalStatus
-                )
-            }
+        executeFlashcardPagination(
+            deckId,
+            searchInfo,
+            nextCursor,
+            baseQuery,
+            true
+        ) as AllFlashcardResultPaginationResponse
     }
 
     suspend fun updateFlashcard(userId: Int, request: UpdateFlashcardRequest) : Boolean = dbQuery {

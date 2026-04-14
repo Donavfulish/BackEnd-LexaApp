@@ -1,6 +1,7 @@
 package api.services
 
 import api.models.dto.AllFlashcardPaginationResponse
+import api.models.dto.AllFlashcardResultPaginationResponse
 import api.models.dto.CreateFlashcardRequest
 import api.models.dto.DetailFlashcard
 import api.models.dto.DetailFlashcardWithResult
@@ -16,8 +17,8 @@ class FlashcardService(
         return flashcardRepository.getAllFlashcard(deckId, searchInfo, nextCursor);
     }
 
-    suspend fun getAllFlashcardWithResult(deckId: Long, userId: Int): List<DetailFlashcardWithResult> {
-        return flashcardRepository.getAllFlashcardWithResult(deckId, userId)
+    suspend fun getAllFlashcardWithResult(deckId: Long, userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllFlashcardResultPaginationResponse {
+        return flashcardRepository.getAllFlashcardWithResult(deckId, userId, searchInfo, nextCursor)
     }
 
     suspend fun addFlashcard(userId: Int, request: CreateFlashcardRequest): Result<Long> {

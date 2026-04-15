@@ -1,5 +1,6 @@
 package api.repository
 
+import api.models.dto.AuthResult
 import api.models.dto.OAuthRegisterRequest
 import api.models.dto.ResetPasswordRequest
 import api.models.dto.SignupRequest
@@ -219,5 +220,27 @@ class AuthRepository {
         }) { row ->
             row[passwordHash] = _passwordHash
         } > 0
+    }
+
+    suspend fun updateEmail(oldEmail: String, newEmail: String): Boolean = dbQuery {
+        val targetUserId = UsersTable
+            .slice(UsersTable.id)
+            .select { UsersTable.email eq oldEmail }
+            .singleOrNull()
+            ?.get(UsersTable.id)
+
+        if (targetUserId == null) {
+            return@dbQuery false
+        }
+
+        val isUpdated = UsersTable.update({ UsersTable.id eq targetUserId }) {
+            it[email] = newEmail
+        } > 0
+
+        if (isUpdated) {
+            AuthProviderTable.deleteWhere { userId eq targetUserId }
+        }
+
+        isUpdated
     }
 }

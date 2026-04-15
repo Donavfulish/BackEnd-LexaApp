@@ -14,6 +14,7 @@ import api.repository.AuthRepository
 import api.utils.AuthUtil
 import api.utils.AuthUtil.toResponse
 import io.github.cdimascio.dotenv.dotenv
+import net.mamoe.yamlkt.toYamlElement
 
 val dotenv = dotenv()
 
@@ -206,5 +207,47 @@ class AuthService (
     suspend fun resetPassword(request: ResetPasswordRequest): Boolean {
         val passwordHash = AuthUtil.hash(request.password)
         return authRepository.resetPassword(request.email, passwordHash)
+    }
+
+    suspend fun changeEmail(oldEmail: String, newEmail: String): AuthResult {
+        // 1. Kiểm tra xem email mới đã tồn tại chưa
+        val isNewEmailExisted = authRepository.findByEmail(newEmail)
+
+        if (isNewEmailExisted != null) return AuthResult(
+            ok = false,
+            message = "Email mới đã được sử dụng"
+        )
+
+        // 2. Cập nhật email
+        val isUpdateSuccessful = authRepository.updateEmail(oldEmail, newEmail)
+
+        if (!isUpdateSuccessful) return AuthResult(
+            ok = false,
+            message = "Cập nhật email thất bại"
+        )
+
+        // 3. Tạo & Lưu các token mới
+        val newUserInfo = authRepository.findByEmail(newEmail)
+
+        if (newUserInfo == null) return AuthResult(
+            ok = false,
+            message = "Lỗi không tìm thấy tài khoản sau khi cập nhật"
+        )
+
+        val accessToken = JwtConfig.generateAccessToken(newUserInfo)
+        val refreshToken = JwtConfig.generateRefreshToken(newUserInfo)
+
+        authRepository.storeRefreshToken(newUserInfo.id, refreshToken)
+
+        // 4. Response thông tin User mới
+        return AuthResult(
+            ok = true,
+            message = "Cập nhật email thành công",
+            id = newUserInfo.id,
+            user = newUserInfo.toResponse(),
+            accessToken = accessToken,
+            refreshToken = refreshToken
+        )
+
     }
 }

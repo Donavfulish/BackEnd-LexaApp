@@ -5,6 +5,7 @@ import api.config.getOAuthSub
 import api.config.getUserEmail
 import api.config.getUserId
 import api.config.getUserRole
+import api.models.dto.ChangeEmailRequest
 import api.models.dto.CreateCourseRequest
 import api.models.dto.ErrorResponse
 import api.models.dto.GoogleUserInfo
@@ -208,6 +209,34 @@ fun Route.authRoutes(authService: AuthService) {
                 HttpStatusCode.OK,
                 "Đăng xuất thành công"
             )
+        }
+
+        post("/change-email") {
+            val request = call.receive<ChangeEmailRequest>()
+
+            val oldEmail = call.getUserEmail()
+            val newEmail = request.email
+
+            if (oldEmail.isNullOrEmpty()) {
+                call.respond(
+                    HttpStatusCode.Unauthorized,
+                    "Không tìm thấy email hiện tại của tài khoản"
+                )
+            }
+
+            val newUserInfo = authService.changeEmail(oldEmail!!, newEmail)
+
+            if (newUserInfo.ok) {
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(newUserInfo, "Cập nhật email thành công")
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    errorResponse(newUserInfo.message ?: "Cập nhật email thất bại")
+                )
+            }
         }
     }
 

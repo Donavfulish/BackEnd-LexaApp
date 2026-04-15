@@ -103,3 +103,8 @@ data class OAuthRegisterRequest (
     var english_certificate_url: String? = null,
     var pedagogical_certificate_url: String? = null
 )
+
+@Serializable
+data class ChangeEmailRequest (
+    val email: String
+)

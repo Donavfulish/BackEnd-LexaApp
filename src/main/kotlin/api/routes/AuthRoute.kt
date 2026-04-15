@@ -14,6 +14,7 @@ import api.models.dto.OAuthUserInfo
 import api.models.dto.OtpRequest
 import api.models.dto.OtpVerify
 import api.models.dto.RefreshRequest
+import api.models.dto.ResetPasswordRequest
 import api.models.dto.SignupRequest
 import api.models.dto.errorResponse
 import api.models.dto.successResponse
@@ -390,6 +391,20 @@ fun Route.authRoutes(authService: AuthService) {
                 }
             } catch (e: Exception) {
                 call.respond(HttpStatusCode.InternalServerError, "Không thể gửi mail: ${e.message}")
+            }
+        }
+    }
+
+    route("/api/auth/reset-password") {
+        post {
+            val request = call.receive<ResetPasswordRequest>()
+
+            val isResetSuccess = authService.resetPassword(request)
+
+            if (isResetSuccess) {
+                call.respond(HttpStatusCode.OK, successResponse(null, "Reset mật khẩu thành công"))
+            } else {
+                call.respond(HttpStatusCode.BadRequest, ErrorResponse(false, "Reset mật khẩu thất bại"))
             }
         }
     }

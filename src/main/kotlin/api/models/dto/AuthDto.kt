@@ -88,6 +88,12 @@ data class OtpVerify (
 )
 
 @Serializable
+data class ResetPasswordRequest(
+    val email: String,
+    val password: String
+)
+
+@Serializable
 data class OAuthRegisterRequest (
     val provider: ProviderType,
     val name: String,

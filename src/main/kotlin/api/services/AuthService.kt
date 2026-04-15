@@ -6,6 +6,7 @@ import api.models.dto.AuthResult
 import api.models.dto.LoginRequest
 import api.models.dto.OAuthRegisterRequest
 import api.models.dto.RefreshRequest
+import api.models.dto.ResetPasswordRequest
 import api.models.dto.SignupRequest
 import api.models.dto.UserInfo
 import api.models.enum.ProviderType
@@ -200,5 +201,10 @@ class AuthService (
             accessToken = accessToken,
             refreshToken = refreshToken
         )
+    }
+
+    suspend fun resetPassword(request: ResetPasswordRequest): Boolean {
+        val passwordHash = AuthUtil.hash(request.password)
+        return authRepository.resetPassword(request.email, passwordHash)
     }
 }

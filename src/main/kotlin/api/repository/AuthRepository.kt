@@ -1,6 +1,7 @@
 package api.repository
 
 import api.models.dto.OAuthRegisterRequest
+import api.models.dto.ResetPasswordRequest
 import api.models.dto.SignupRequest
 import api.models.dto.UserInfo
 import api.models.enum.OtpPurpose
@@ -210,5 +211,13 @@ class AuthRepository {
             (AuthProviderTable.provider eq provider) and
                     (AuthProviderTable.providerUserId eq sub)
         }.empty()
+    }
+
+    suspend fun resetPassword(email: String, _passwordHash: String): Boolean = dbQuery {
+        UsersTable.update({
+            UsersTable.email eq email
+        }) { row ->
+            row[passwordHash] = _passwordHash
+        } > 0
     }
 }

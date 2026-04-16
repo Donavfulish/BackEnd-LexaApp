@@ -44,7 +44,7 @@ object UsersTable : IntIdTable("users") {
 
     // Đã sửa thành pgEnum
     val role = pgEnum<UserRole>("role", "user_role").default(UserRole.STUDENT)
-
+    val fcmToken = text("fcm_token").nullable()
     val createdAt = datetime("created_at").defaultExpression(CurrentDateTime)
     val updatedAt = datetime("updated_at").defaultExpression(CurrentDateTime)
 }

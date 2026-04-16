@@ -69,4 +69,5 @@ dependencies {
 
     // Cloudinary lưu trữ ảnh
     implementation("com.cloudinary:cloudinary-http5:2.0.0")
+    implementation("com.google.firebase:firebase-admin:9.2.0")
 }

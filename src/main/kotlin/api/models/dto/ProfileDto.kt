@@ -30,3 +30,7 @@ data class GetProfileResponse  (
 data class GetLanguageResponse (
     val language: String
 )
+@Serializable
+data class UpdateFcmTokenRequest(
+    val fcmToken: String
+)

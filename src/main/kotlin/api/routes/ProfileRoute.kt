@@ -35,5 +35,19 @@ fun Route.profileRoutes(service: ProfileService) {
                     errorResponse("Cập nhật thất bại")
             )
         }
+        patch("/fcm-token") {
+            val userId = call.getUserIdOrRespond() ?: return@patch
+            val request = call.receive<UpdateFcmTokenRequest>()
+
+            val success = service.updateFcmToken(userId, request)
+
+            call.respond(
+                if (success) HttpStatusCode.OK else HttpStatusCode.InternalServerError,
+                if (success)
+                    successResponse(null, "Cập nhật FCM Token thành công")
+                else
+                    errorResponse("Không thể cập nhật FCM Token")
+            )
+        }
     }
 }

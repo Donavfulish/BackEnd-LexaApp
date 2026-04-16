@@ -37,3 +37,5 @@ out/
 
 .env
 .env
+
+**/firebase-service.json

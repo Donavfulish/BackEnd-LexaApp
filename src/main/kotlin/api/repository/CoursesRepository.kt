@@ -584,4 +584,25 @@ class CoursesRepository {
 
         true
     }
+    suspend fun getLearnersInCourse(courseId: Long): List<Int> = dbQuery {
+        (SpeakingParagraphResultsTable
+                innerJoin SpeakingParagraphsTable
+                innerJoin SpeakingDaysTable)
+            .slice(SpeakingParagraphResultsTable.userId)
+            .select { SpeakingDaysTable.courseId eq courseId }
+            .withDistinct()
+            .map { row ->
+                row[SpeakingParagraphResultsTable.userId].value
+            }
+    }
+    suspend fun getLearnersInCourseBySpeakingId(speakingId: Long): List<Int> = dbQuery {
+        SpeakingParagraphResultsTable
+            .innerJoin(SpeakingParagraphsTable)
+            .slice(SpeakingParagraphResultsTable.userId)
+            .select { SpeakingParagraphsTable.speakingDayId eq speakingId }
+            .map { row ->
+                row[SpeakingParagraphResultsTable.userId].value
+            }
+            .distinct()
+    }
 }

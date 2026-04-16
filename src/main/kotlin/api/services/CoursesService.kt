@@ -1,7 +1,10 @@
 package api.services
 
+import api.events.AppEvent
+import api.events.EventBus
 import api.models.dto.*
 import api.repository.CoursesRepository
+import api.repository.ProfileRepository
 
 // Nơi xử lí logic nghiệp vụ, cầu nối giữa route và repo, tương tự controller
 class CoursesService (
@@ -60,6 +63,13 @@ class CoursesService (
 
         return try {
             val result = courseRepository.editCourse(courseId, userId,course);
+
+            val listUsersFavorited = ProfileRepository().getUsersWhoFavoritedCourse(userId,courseId)
+            var listLearners = CoursesRepository().getLearnersInCourse(courseId)
+            val combinedUserIds = (listUsersFavorited + listLearners).toSet().toList()
+
+            EventBus.publish(AppEvent.SpeakingDayChanged(combinedUserIds, "Cập nhật khóa học", "Khóa học bạn quan tâm vừa được chỉnh sửa"))
+
             Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)
@@ -67,7 +77,16 @@ class CoursesService (
     }
     suspend fun deleteCourse(userId: Int, courseId: Long ) : Result<Boolean> {
         return try {
+
+            val listUsersFavorited = ProfileRepository().getUsersWhoFavoritedCourse(userId,courseId)
+            var listLearners = CoursesRepository().getLearnersInCourse(courseId)
+            val combinedUserIds = (listUsersFavorited + listLearners).toSet().toList()
+
             val result = courseRepository.deleteCourse(courseId, userId);
+
+
+            EventBus.publish(AppEvent.CourseUpdated(combinedUserIds, "Cập nhật khóa học", "Khóa học bạn quan tâm vừa bị xóa"))
+
             Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)

@@ -1,6 +1,7 @@
 package api.services
 
 import api.models.dto.GetProfileResponse
+import api.models.dto.UpdateFcmTokenRequest
 import api.models.dto.UpdateProfileRequest
 import api.repository.ProfileRepository
 
@@ -14,5 +15,8 @@ class ProfileService(
 
     suspend fun updateProfile(userId: Int, data: UpdateProfileRequest): Boolean {
         return profileRepository.updateProfile(userId, data)
+    }
+    suspend fun updateFcmToken(userId: Int, request: UpdateFcmTokenRequest): Boolean {
+        return profileRepository.updateFcmToken(userId, request)
     }
 }

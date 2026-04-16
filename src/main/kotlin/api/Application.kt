@@ -1,6 +1,10 @@
 package api
+import api.config.FirebaseConfig
+import api.events.setupEventListeners
 import api.plugins.configureExceptionHandling
 import api.plugins.configureRouting
+import api.repository.ProfileRepository
+import api.services.NotificationService
 import com.lexa.api.plugins.configureSecurity
 import com.lexa.api.plugins.configureSerialization
 import io.ktor.server.application.*
@@ -29,11 +33,17 @@ fun main(args: Array<String>) {
 }
 
 fun Application.module() {
+
+    val profileRepository = ProfileRepository()
+    val notificationService = NotificationService(profileRepository)
+
     DatabaseFactory.init()
     configureMonitoring()
     configureSerialization()
     configureSecurity(httpClient = applicationHttpClient)
     configureRouting()
     configureExceptionHandling()
+    FirebaseConfig.initFirebase()
+    setupEventListeners(notificationService)
 }
 

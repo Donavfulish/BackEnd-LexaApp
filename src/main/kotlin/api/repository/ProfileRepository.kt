@@ -3,9 +3,13 @@ package api.repository
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.*
 import api.models.dto.GetProfileResponse
+import api.models.dto.UpdateFcmTokenRequest
 import api.models.dto.UpdateProfileRequest
+import api.models.tables.SpeakingDaysTable
+import api.models.tables.UserFavoriteCoursesTable
 import api.models.tables.UsersTable
 import api.utils.toLocalDate
+import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.Date
 import java.time.LocalDate
 import java.time.LocalDateTime
@@ -49,4 +53,54 @@ class ProfileRepository {
 
         updatedRows > 0
     }
+    suspend fun updateFcmToken(userId: Int,  request: UpdateFcmTokenRequest): Boolean = dbQuery {
+        val updatedRows = UsersTable.update({ UsersTable.id eq userId }) {
+            it[UsersTable.fcmToken] = request.fcmToken
+        }
+        updatedRows > 0
+    }
+    suspend fun getFcmToken(userId: Int): String? = dbQuery {
+        UsersTable
+            .slice(UsersTable.fcmToken)
+            .select { UsersTable.id eq userId }
+            .map { row -> row[UsersTable.fcmToken] }
+            .singleOrNull()
+    }
+
+    suspend fun getFcmTokensByUserIds(userIds: List<Int>): List<String> = dbQuery {
+        UsersTable
+            .slice(UsersTable.fcmToken)
+            .select { UsersTable.id inList userIds }
+            .mapNotNull { row -> row[UsersTable.fcmToken] }
+    }
+    suspend fun getUsersWhoFavoritedCourse(ownerId: Int,courseId: Long): List<Int> = dbQuery {
+        UserFavoriteCoursesTable
+            .slice(UserFavoriteCoursesTable.userId)
+            .select {
+                (UserFavoriteCoursesTable.courseId eq courseId) and
+                        (UserFavoriteCoursesTable.userId neq ownerId)
+            }
+            .map { row ->
+                row[UserFavoriteCoursesTable.userId].value
+            }
+    }
+
+    suspend fun getUsersWhoFavoritedCourseBySpeakingDayId(ownerId: Int,speakingDayId: Long): List<Int> = dbQuery {
+
+        UsersTable
+            .innerJoin(UserFavoriteCoursesTable)
+            .innerJoin(
+                SpeakingDaysTable,
+                onColumn = { UserFavoriteCoursesTable.courseId },
+                otherColumn = { SpeakingDaysTable.courseId }
+            )
+            .slice(UsersTable.id)
+            .select { (SpeakingDaysTable.id eq speakingDayId ) and
+                    (UserFavoriteCoursesTable.userId neq ownerId)
+            }
+            .map { row ->
+                row[UsersTable.id].value
+            }
+        }
+
 }

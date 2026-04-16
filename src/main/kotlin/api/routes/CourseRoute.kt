@@ -120,7 +120,6 @@ fun Route.courseRoutes(service: CoursesService, speakingDayService: SpeakingDayS
             }
         }
 
-        // Đã sửa speaking-day thành speaking-days và lấy next_order đúng cách
         get("/{courseId}/speaking-days") {
             val userId = call.getUserIdOrRespond() ?: return@get
             val courseId = call.getLongParamOrRespond("courseId") ?: return@get

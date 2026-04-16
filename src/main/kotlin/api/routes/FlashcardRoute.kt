@@ -25,8 +25,16 @@ fun Route.flashcardRoutes(service: FlashcardService) {
         // ===== GET ALL =====
         get {
             val deckId = call.getLongParamOrRespond("deckId") ?: return@get
+            val queryParams = call.request.queryParameters
 
-            val data = service.getAllFlashcard(deckId)
+            val searchInfo = SearchInfo(
+                query = queryParams["query"] ?: "",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
+                order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
+                limit = queryParams["limit"]?.toIntOrNull() ?: 10
+            )
+            val nextCursor = queryParams["next_id"]?.toLongOrNull()
+            val data = service.getAllFlashcard(deckId, searchInfo, nextCursor)
             call.respond(HttpStatusCode.OK, successResponse(data, "Lấy danh sách flashcard"))
         }
 
@@ -155,8 +163,16 @@ fun Route.flashcardRoutes(service: FlashcardService) {
         get {
             val deckId = call.getLongParamOrRespond("deckId") ?: return@get
             val userId = call.getUserIdOrRespond() ?: return@get
+            val queryParams = call.request.queryParameters
+            val searchInfo = SearchInfo(
+                query = queryParams["query"] ?: "",
+                sortBy = if(!queryParams["sort"].isNullOrEmpty()) queryParams["sort"] else  "",
+                order = if(!queryParams["order"].isNullOrEmpty()) queryParams["order"] else "desc",
+                limit = queryParams["limit"]?.toIntOrNull() ?: 10
+            )
+            val nextCursor = queryParams["next_id"]?.toLongOrNull()
 
-            val data =service.getAllFlashcardWithResult(deckId, userId)
+            val data = service.getAllFlashcardWithResult(deckId, userId, searchInfo, nextCursor)
             call.respond(HttpStatusCode.OK, successResponse(data, "Lấy danh sách FC kèm kết quả thành công"))
         }
 
@@ -171,7 +187,6 @@ fun Route.flashcardRoutes(service: FlashcardService) {
                 call.respond(HttpStatusCode.BadRequest, errorResponse("Deck ID không khớp"))
                 return@patch
             }
-
             service.updateFlashcardResults(userId, request).handleResult(
                 onSuccess = { success ->
                     call.respond(

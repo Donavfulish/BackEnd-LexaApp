@@ -1,10 +1,12 @@
 package api.repository
 
+import api.models.dto.ChangePasswordRequest
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.*
 import api.models.dto.GetProfileResponse
 import api.models.dto.UpdateFcmTokenRequest
 import api.models.dto.UpdateProfileRequest
+import api.models.dto.UserInfo
 import api.models.tables.SpeakingDaysTable
 import api.models.tables.UserFavoriteCoursesTable
 import api.models.tables.UsersTable

@@ -6,6 +6,7 @@ import api.config.getUserEmail
 import api.config.getUserId
 import api.config.getUserRole
 import api.models.dto.ChangeEmailRequest
+import api.models.dto.ChangePasswordRequest
 import api.models.dto.CreateCourseRequest
 import api.models.dto.ErrorResponse
 import api.models.dto.GoogleUserInfo
@@ -28,6 +29,7 @@ import com.lexa.api.plugins.applicationHttpClient
 import com.lexa.api.plugins.redirects
 import api.services.CoursesService
 import api.utils.FileUtil
+import api.utils.getUserIdOrRespond
 import io.ktor.client.call.body
 import io.ktor.client.request.get
 import io.ktor.client.request.header
@@ -52,6 +54,7 @@ import io.ktor.server.response.respondRedirect
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.header
+import io.ktor.server.routing.patch
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import io.ktor.server.sessions.sessions
@@ -234,6 +237,25 @@ fun Route.authRoutes(authService: AuthService) {
                 call.respond(
                     HttpStatusCode.BadRequest,
                     errorResponse(newUserInfo.message ?: "Cập nhật email thất bại")
+                )
+            }
+        }
+
+        patch("/change-password") {
+            val userId = call.getUserIdOrRespond() ?: return@patch
+            val request = call.receive<ChangePasswordRequest>()
+
+            val newUserInfo = authService.changePassword(userId, request)
+
+            if (newUserInfo.ok) {
+                call.respond(
+                    HttpStatusCode.OK,
+                    successResponse(newUserInfo, "Cập nhật mật khẩu thành công")
+                )
+            } else {
+                call.respond(
+                    HttpStatusCode.BadRequest,
+                    errorResponse(newUserInfo.message ?: "Cập nhật mật khẩu thất bại")
                 )
             }
         }

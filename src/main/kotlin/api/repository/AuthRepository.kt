@@ -243,4 +243,10 @@ class AuthRepository {
 
         isUpdated
     }
+
+    suspend fun updatePassword(userId: Int, _passwordHash: String): Boolean = dbQuery {
+        UsersTable.update({UsersTable.id eq userId}) {
+            it[passwordHash] = _passwordHash
+        } > 0
+    }
 }

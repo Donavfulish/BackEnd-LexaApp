@@ -1,8 +1,10 @@
 package api.services
 
+import api.models.dto.ChangePasswordRequest
 import api.models.dto.GetProfileResponse
 import api.models.dto.UpdateFcmTokenRequest
 import api.models.dto.UpdateProfileRequest
+import api.models.dto.UserInfo
 import api.repository.ProfileRepository
 
 

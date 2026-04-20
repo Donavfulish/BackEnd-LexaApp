@@ -3,6 +3,7 @@ package api.services
 import api.config.JwtConfig
 import api.config.MailFactory
 import api.models.dto.AuthResult
+import api.models.dto.ChangePasswordRequest
 import api.models.dto.LoginRequest
 import api.models.dto.OAuthRegisterRequest
 import api.models.dto.RefreshRequest
@@ -13,6 +14,7 @@ import api.models.enum.ProviderType
 import api.repository.AuthRepository
 import api.utils.AuthUtil
 import api.utils.AuthUtil.toResponse
+import com.cloudinary.utils.StringUtils
 import io.github.cdimascio.dotenv.dotenv
 import net.mamoe.yamlkt.toYamlElement
 
@@ -248,6 +250,47 @@ class AuthService (
             accessToken = accessToken,
             refreshToken = refreshToken
         )
+    }
 
+    suspend fun changePassword(userId: Int, request: ChangePasswordRequest): AuthResult {
+        val oldPassword = request.oldPassword
+        val newPassword = request.newPassword
+
+        // 1. Kiểm tra xem password có chính xác chưa
+        val oldUserInfo = authRepository.findById(userId)
+            ?: return AuthResult(false, "Tài khoản không tồn tại")
+
+        if (!AuthUtil.verify(oldPassword, oldUserInfo.passwordHash!!))
+            return AuthResult(
+                ok = false,
+                message = "Mật khẩu cũ không đúng"
+            )
+
+        // 2. Cập nhật mật khẩu
+        val newPasswordHash = AuthUtil.hash(newPassword)
+        val isUpdateSuccessful = authRepository.updatePassword(userId, newPasswordHash)
+
+        if (!isUpdateSuccessful) return AuthResult(
+            ok = false,
+            message = "Cập nhật mật khẩu mới thất bại"
+        )
+
+        // 3. Tạo & Lưu các token mới
+        val newUserInfo = oldUserInfo.copy(passwordHash = newPasswordHash)
+
+        val accessToken = JwtConfig.generateAccessToken(newUserInfo)
+        val refreshToken = JwtConfig.generateRefreshToken(newUserInfo)
+
+        authRepository.storeRefreshToken(newUserInfo.id, refreshToken)
+
+        // 4. Response thông tin User mới
+        return AuthResult(
+            ok = true,
+            message = "Cập nhật mật khẩu thành công",
+            id = newUserInfo.id,
+            user = newUserInfo.toResponse(),
+            accessToken = accessToken,
+            refreshToken = refreshToken
+        )
     }
 }

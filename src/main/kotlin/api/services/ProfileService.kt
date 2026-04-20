@@ -16,7 +16,12 @@ class ProfileService(
     suspend fun updateProfile(userId: Int, data: UpdateProfileRequest): Boolean {
         return profileRepository.updateProfile(userId, data)
     }
+
     suspend fun updateFcmToken(userId: Int, request: UpdateFcmTokenRequest): Boolean {
         return profileRepository.updateFcmToken(userId, request)
+    }
+
+    suspend fun uploadAvatar(userId: Int, imageUrl: String?): Boolean {
+        return profileRepository.updateAvatar(userId, imageUrl)
     }
 }

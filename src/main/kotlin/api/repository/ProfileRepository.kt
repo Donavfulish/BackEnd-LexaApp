@@ -8,6 +8,7 @@ import api.models.dto.UpdateProfileRequest
 import api.models.tables.SpeakingDaysTable
 import api.models.tables.UserFavoriteCoursesTable
 import api.models.tables.UsersTable
+import api.services.CloudinaryService
 import api.utils.toLocalDate
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
 import org.jetbrains.exposed.sql.javatime.Date
@@ -103,4 +104,20 @@ class ProfileRepository {
             }
         }
 
+    suspend fun updateAvatar(userId: Int, imageUrl: String?): Boolean = dbQuery {
+        val oldAvatarUrl = UsersTable
+            .slice(UsersTable.avatarUrl)
+            .select { UsersTable.id eq userId }
+            .singleOrNull()
+            ?.get(UsersTable.avatarUrl)
+
+        CloudinaryService.deleteImage(oldAvatarUrl ?: "")
+
+        val updatedRows = UsersTable.update({ UsersTable.id eq userId }) {
+            it[avatarUrl] = imageUrl
+            it[updatedAt] = LocalDateTime.now()
+        }
+
+        updatedRows > 0
+    }
 }

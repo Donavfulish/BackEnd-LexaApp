@@ -141,7 +141,6 @@ fun Route.authRoutes(authService: AuthService) {
                     errorResponse(result.message ?: "Đăng ký thất bại")
                 )
             }
-
         }
     }
 

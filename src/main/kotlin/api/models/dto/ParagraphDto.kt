@@ -66,3 +66,9 @@ data class ParagraphResultResponseDto(
     val badCount: Int?,
     val userAudioUrl: String?
 )
+
+@Serializable
+data class SubmitBulkDailyResultRequest(
+    val speakingDayId: Long,
+    val results: List<UpdateParagraphResultRequest>
+)

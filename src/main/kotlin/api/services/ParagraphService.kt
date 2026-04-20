@@ -3,6 +3,7 @@ package api.services
 import api.models.dto.CreateParagraphRequest
 import api.models.dto.ParagraphResponseDto
 import api.models.dto.ParagraphResultResponseDto
+import api.models.dto.SubmitBulkDailyResultRequest
 import api.models.dto.UpdateParagraphRequest
 import api.models.dto.UpdateParagraphResultRequest
 import api.models.enum.UserRole
@@ -94,6 +95,30 @@ class ParagraphService(
         return try {
             val result = paragraphRepository.upsertParagraphResult(userId, request)
             Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Thêm vào class ParagraphService
+    suspend fun submitBulkParagraphResults(
+        userId: Int,
+        request: SubmitBulkDailyResultRequest
+    ): Result<Boolean> {
+
+        if (request.results.isEmpty()) {
+            return Result.success(true) // Không có gì để lưu, coi như thành công
+        }
+
+        // Validate nhanh xem có ID nào không hợp lệ không
+        val hasInvalidIds = request.results.any { it.paragraphId <= 0 }
+        if (hasInvalidIds) {
+            return Result.failure(Exception("Có ID đoạn văn không hợp lệ trong danh sách"))
+        }
+
+        return try {
+            val isSuccess = paragraphRepository.upsertBulkParagraphResults(userId, request.results)
+            Result.success(isSuccess)
         } catch (e: Exception) {
             Result.failure(e)
         }

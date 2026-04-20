@@ -127,4 +127,45 @@ class ParagraphRepository {
         )
 
     }
+
+    suspend fun upsertBulkParagraphResults(
+        userId: Int,
+        results: List<UpdateParagraphResultRequest>
+    ): Boolean = dbQuery {
+        // dbQuery tạo ra một transaction. Nếu vòng lặp này có lỗi, tự động rollback toàn bộ.
+        results.forEach { request ->
+            val evaluationJsonString = request.wordEvaluation?.let { Json.encodeToString(it) }
+
+            val existingResult = SpeakingParagraphResultsTable.select {
+                (SpeakingParagraphResultsTable.userId eq userId) and
+                        (SpeakingParagraphResultsTable.paragraphId eq request.paragraphId)
+            }.singleOrNull()
+
+            if (existingResult != null) {
+                // Cập nhật nếu đã tồn tại
+                SpeakingParagraphResultsTable.update({
+                    (SpeakingParagraphResultsTable.userId eq userId) and
+                            (SpeakingParagraphResultsTable.paragraphId eq request.paragraphId)
+                }) {
+                    request.goodCount?.let { count -> it[goodCount] = count }
+                    request.mediumCount?.let { count -> it[mediumCount] = count }
+                    request.badCount?.let { count -> it[badCount] = count }
+                    request.userAudioUrl?.let { url -> it[userAudioUrl] = url }
+                    evaluationJsonString?.let { json -> it[wordEvaluation] = json }
+                }
+            } else {
+                // Thêm mới nếu chưa có
+                SpeakingParagraphResultsTable.insert {
+                    it[this.userId] = userId
+                    it[this.paragraphId] = request.paragraphId
+                    it[this.goodCount] = request.goodCount
+                    it[this.mediumCount] = request.mediumCount
+                    it[this.badCount] = request.badCount
+                    it[this.userAudioUrl] = request.userAudioUrl
+                    it[this.wordEvaluation] = evaluationJsonString
+                }
+            }
+        }
+        true // Trả về true nếu toàn bộ chạy thành công
+    }
 }

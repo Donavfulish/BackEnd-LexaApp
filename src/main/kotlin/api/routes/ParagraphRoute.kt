@@ -92,5 +92,19 @@ fun Route.paragraphRoute(service: ParagraphService) {
                 }
             )
         }
+
+        patch("/bulk") {
+            val userId = call.getUserIdOrRespond() ?: return@patch
+            val request = call.receive<SubmitBulkDailyResultRequest>()
+
+            service.submitBulkParagraphResults(userId, request).handleResult(
+                onSuccess = {
+                    call.respond(HttpStatusCode.OK, successResponse(it, "Lưu toàn bộ tiến độ thành công"))
+                },
+                onError = {
+                    call.respond(HttpStatusCode.BadRequest, errorResponse(it))
+                }
+            )
+        }
     }
 }

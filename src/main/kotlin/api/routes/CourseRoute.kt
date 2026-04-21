@@ -32,6 +32,12 @@ fun Route.courseRoutes(service: CoursesService, speakingDayService: SpeakingDayS
 
     // ===== PUBLIC (BUT NEED AUTH USER CONTEXT) =====
     secureRoute("/api/courses") {
+        get("/suggestion"){
+            val queryParams = call.request.queryParameters
+            val query = queryParams["query"] ?: ""
+            val data = service.getCourseSuggestion(query)
+            call.respond(HttpStatusCode.OK, successResponse(data, "Tất cả khóa học"))
+        }
 
         get("/featured") {
             val userId = call.getUserIdOrRespond() ?: return@get

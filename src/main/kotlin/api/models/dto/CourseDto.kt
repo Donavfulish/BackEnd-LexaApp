@@ -87,6 +87,7 @@ data class EditCourseRequest(
 @Serializable
 data class SearchResponse(
     val id: Long,
+    val title: String,
     val score: Float
 )
 @Serializable

@@ -13,6 +13,10 @@ import api.repository.FlashcardRepository
 class FlashcardService(
     private val flashcardRepository: FlashcardRepository
 ) {
+    suspend fun getFlashcardSuggestions(query: String): List<String> {
+        return flashcardRepository.getFlashcardSuggestions(query)
+    }
+
     suspend fun getAllFlashcard(deckId: Long, searchInfo: SearchInfo, nextCursor: Long?): AllFlashcardPaginationResponse{
         return flashcardRepository.getAllFlashcard(deckId, searchInfo, nextCursor);
     }

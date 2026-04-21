@@ -12,6 +12,14 @@ import io.ktor.server.routing.*
 
 fun Route.deckRoutes(service: DeckService) {
 
+    secureRoute("/api/decks/suggestions") {
+        get {
+            val query = call.request.queryParameters["query"] ?: ""
+            val suggestions = service.getDeckSuggestions(query)
+            call.respond(HttpStatusCode.OK, successResponse(suggestions, "Lấy gợi ý bộ từ vựng thành công"))
+        }
+    }
+
     // ===== USER DECKS =====
     secureRoute("/api/user/me/decks") {
 

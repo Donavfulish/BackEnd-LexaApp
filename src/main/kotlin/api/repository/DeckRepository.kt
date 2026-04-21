@@ -37,6 +37,10 @@ import java.time.LocalDateTime
 
 class DeckRepository {
 
+    suspend fun getDeckSuggestions(query: String): List<String> {
+        return SearchEngine.searchGlobalDecks(query).take(10).map { it.title }
+    }
+
     suspend fun createDeck(userId: Int, request: CreateDeckRequest): Long = dbQuery {
         FlashcardDecksTable.insertAndGetId {
             it[title] = request.title

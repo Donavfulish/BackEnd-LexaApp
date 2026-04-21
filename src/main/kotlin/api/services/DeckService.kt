@@ -19,6 +19,10 @@ class DeckService(
     private val courseRepository: CoursesRepository
 ) {
 
+    suspend fun getDeckSuggestions(query: String): List<String> {
+        return deckRepository.getDeckSuggestions(query)
+    }
+
     suspend fun getMyDecks(userId: Int, searchInfo: SearchInfo, nextCursor: Long?): AllDeckPaginationResponse{
         return deckRepository.getAllDecks(userId, searchInfo, nextCursor);
     }

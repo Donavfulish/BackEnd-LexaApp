@@ -20,6 +20,14 @@ import kotlinx.serialization.json.Json
 
 fun Route.flashcardRoutes(service: FlashcardService) {
 
+    secureRoute("/api/decks/flashcards") {
+        get("/suggestions") {
+            val query = call.request.queryParameters["query"] ?: ""
+            val suggestions = service.getFlashcardSuggestions(query)
+            call.respond(HttpStatusCode.OK, successResponse(suggestions, "Lấy gợi ý từ vựng thành công"))
+        }
+    }
+
     secureRoute("/api/decks/{deckId}/flashcards") {
 
         // ===== GET ALL =====

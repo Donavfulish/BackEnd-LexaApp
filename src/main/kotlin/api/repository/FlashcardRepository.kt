@@ -39,6 +39,11 @@ import kotlin.text.toInt
 import kotlin.text.toLong
 
 class FlashcardRepository {
+
+    suspend fun getFlashcardSuggestions(query: String): List<String> {
+        return SearchEngine.searchGlobalFlashcards(query).take(10).map { it.title }
+    }
+
     private suspend fun executeFlashcardPagination(
         deckId: Long,
         searchInfo: SearchInfo,

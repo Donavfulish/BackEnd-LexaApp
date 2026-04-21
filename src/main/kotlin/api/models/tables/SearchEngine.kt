@@ -244,6 +244,52 @@ object SearchEngine {
         results
     }
 
+    suspend fun searchGlobalDecks(query: String) : List<SearchResponse> = dbQuery {
+        val results = mutableListOf<SearchResponse>()
+        val sql =
+            """
+                 WITH search AS (
+                    SELECT 
+                      id, title,
+                      ts_rank(search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
+                      similarity(f_unaccent(title), f_unaccent(?)) AS trigram_rank
+                      FROM flashcard_decks        
+                    WHERE 
+                     privacy = 'PUBLIC'
+                     AND (
+                      search_vector @@ websearch_to_tsquery('simple', f_unaccent(?)) 
+                      OR f_unaccent(title) % f_unaccent(?)
+                      OR f_unaccent(title) ILIKE (f_unaccent(?) || '%')))
+
+                  
+                SELECT id, title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+                FROM search
+                ORDER BY final_score DESC
+            """.trimIndent()
+        TransactionManager.current().exec(
+            sql,
+            args = listOf(
+                TextColumnType() to query,
+                TextColumnType() to query,
+                TextColumnType() to query,
+                TextColumnType() to query,
+                TextColumnType() to "%$query%"
+            ),
+            explicitStatementType = StatementType.SELECT
+        ) { resultSet ->
+            while (resultSet.next()){
+                results.add(
+                    SearchResponse(
+                        id = resultSet.getLong("id"),
+                        title = resultSet.getString("title"),
+                        score = resultSet.getFloat("final_score")
+                    )
+                )
+            }
+        }
+        results
+    }
+
     suspend fun searchAllFlashcard(query: String, deckId: Long): List<SearchResponse> = dbQuery{
         val results = mutableListOf<SearchResponse>()
         val sql =
@@ -272,6 +318,52 @@ object SearchEngine {
                 TextColumnType() to query,
                 TextColumnType() to query,
                 LongColumnType() to deckId,
+                TextColumnType() to query,
+                TextColumnType() to query,
+                TextColumnType() to "%$query%"
+            ),
+            explicitStatementType = StatementType.SELECT
+        ) { resultSet ->
+            while (resultSet.next()){
+                results.add(
+                    SearchResponse(
+                        id = resultSet.getLong("id"),
+                        title = resultSet.getString("title"),
+                        score = resultSet.getFloat("final_score")
+                    )
+                )
+            }
+        }
+        results
+    }
+
+    suspend fun searchGlobalFlashcards(query: String): List<SearchResponse> = dbQuery{
+        val results = mutableListOf<SearchResponse>()
+        val sql =
+            """
+                 WITH search AS (
+                    SELECT 
+                      flashcards.id, flashcards.word,
+                      ts_rank(flashcards.search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
+                      similarity(f_unaccent(flashcards.word), f_unaccent(?)) AS trigram_rank
+                      FROM flashcards JOIN flashcard_decks ON flashcards.deck_id = flashcard_decks.id
+                    WHERE 
+                     flashcard_decks.privacy = 'PUBLIC'
+                     AND (
+                      flashcards.search_vector @@ websearch_to_tsquery('simple', f_unaccent(?)) 
+                      OR f_unaccent(flashcards.word) % f_unaccent(?)
+                      OR f_unaccent(flashcards.word) ILIKE (f_unaccent(?) || '%')))
+
+                  
+                SELECT id, word as title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+                FROM search
+                ORDER BY final_score DESC
+            """.trimIndent()
+        TransactionManager.current().exec(
+            sql,
+            args = listOf(
+                TextColumnType() to query,
+                TextColumnType() to query,
                 TextColumnType() to query,
                 TextColumnType() to query,
                 TextColumnType() to "%$query%"

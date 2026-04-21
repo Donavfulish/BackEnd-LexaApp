@@ -5,11 +5,15 @@ import api.events.EventBus
 import api.models.dto.*
 import api.repository.CoursesRepository
 import api.repository.ProfileRepository
+import org.jetbrains.exposed.sql.Query
 
 // Nơi xử lí logic nghiệp vụ, cầu nối giữa route và repo, tương tự controller
 class CoursesService (
     private val courseRepository: CoursesRepository
 ) {
+    suspend fun getCourseSuggestion(query: String): List<String>{
+        return courseRepository.getCourseSuggestions(query)
+    }
     suspend fun getTopics(): List<TopicDto> {
         return courseRepository.getTopics()
     }

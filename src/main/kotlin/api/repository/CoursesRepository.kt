@@ -37,7 +37,9 @@ import java.time.LocalDateTime
 
 // Nơi giao tiếp trực tiếp với database (nơi này sẽ được sử dụng models và dto)
 class CoursesRepository {
-
+    suspend fun getCourseSuggestions(query: String): List<String>{
+        return SearchEngine.searchAllCourses(query).take(10).map { it.title }
+    }
     private val speakingDayRepository = SpeakingDayRepository()
     private fun getStudyingUserCount(courseId: EntityID<Long>): Int {
         val learnerCountExpr = SpeakingParagraphResultsTable.userId.countDistinct()

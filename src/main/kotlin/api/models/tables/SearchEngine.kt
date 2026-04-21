@@ -16,7 +16,7 @@ object SearchEngine {
             """
               WITH search AS (
               SELECT 
-                id,
+                id, title,
                 ts_rank(search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
                 similarity(f_unaccent(title), f_unaccent(?)) AS trigram_rank
               FROM courses
@@ -26,7 +26,7 @@ object SearchEngine {
                 OR f_unaccent(title) % f_unaccent(?)
                 OR f_unaccent(title) ILIKE (f_unaccent(?) || '%')))
   
-            SELECT id, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+            SELECT id, title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
             FROM search
             ORDER BY final_score DESC
             """.trimIndent()
@@ -45,6 +45,7 @@ object SearchEngine {
                 results.add(
                     SearchResponse(
                         id = resultSet.getLong("id"),
+                        title = resultSet.getString("title"),
                         score = resultSet.getFloat("final_score")
                     )
                 )
@@ -59,7 +60,7 @@ object SearchEngine {
             """
                 WITH search AS (
               SELECT 
-                id,
+                id, title,
                 ts_rank(search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
                 similarity(f_unaccent(title), f_unaccent(?)) AS trigram_rank
               FROM courses
@@ -70,7 +71,7 @@ object SearchEngine {
                 OR f_unaccent(title) % f_unaccent(?)
                 OR f_unaccent(title) ILIKE (f_unaccent(?) || '%')))
   
-            SELECT id, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+            SELECT id, title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
             FROM search
             ORDER BY final_score DESC
             """.trimIndent()
@@ -90,6 +91,7 @@ object SearchEngine {
                 results.add(
                     SearchResponse(
                         id = resultSet.getLong("id"),
+                        title = resultSet.getString("title"),
                         score = resultSet.getFloat("final_score")
                     )
                 )
@@ -104,7 +106,7 @@ object SearchEngine {
             """
              WITH search AS (
                 SELECT 
-                  id,
+                  id, title,
                   ts_rank(search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
                   similarity(f_unaccent(title), f_unaccent(?)) AS trigram_rank
                 FROM courses JOIN user_favorite_courses ON courses.id = user_favorite_courses.course_id
@@ -115,7 +117,7 @@ object SearchEngine {
                   OR f_unaccent(title) % f_unaccent(?)
                   OR f_unaccent(title) ILIKE (f_unaccent(?) || '%')))
               
-            SELECT id, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+            SELECT id, title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
             FROM search
             ORDER BY final_score DESC
             """.trimIndent()
@@ -135,6 +137,7 @@ object SearchEngine {
                 results.add(
                     SearchResponse(
                         id = resultSet.getLong("id"),
+                        title = resultSet.getString("title"),
                         score = resultSet.getFloat("final_score")
                     )
                 )
@@ -149,7 +152,7 @@ object SearchEngine {
             """
                  WITH search AS (
                     SELECT 
-                      id,
+                      courses.id, courses.title,
                       ts_rank(search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
                       similarity(f_unaccent(courses.title), f_unaccent(?)) AS trigram_rank
                       FROM courses        
@@ -165,7 +168,7 @@ object SearchEngine {
                       OR f_unaccent(courses.title) % f_unaccent(?)
                       OR f_unaccent(courses.title) ILIKE (f_unaccent(?) || '%')))
                   
-                SELECT id, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+                SELECT id, title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
                 FROM search
                 ORDER BY final_score DESC
             """.trimIndent()
@@ -185,6 +188,7 @@ object SearchEngine {
                 results.add(
                     SearchResponse(
                         id = resultSet.getLong("id"),
+                        title = resultSet.getString("title"),
                         score = resultSet.getFloat("final_score")
                     )
                 )
@@ -211,7 +215,7 @@ object SearchEngine {
                       OR f_unaccent(title) ILIKE (f_unaccent(?) || '%')))
 
                   
-                SELECT id,title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+                SELECT id, title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
                 FROM search
                 ORDER BY final_score DESC
             """.trimIndent()
@@ -231,6 +235,7 @@ object SearchEngine {
                 results.add(
                     SearchResponse(
                         id = resultSet.getLong("id"),
+                        title = resultSet.getString("title"),
                         score = resultSet.getFloat("final_score")
                     )
                 )
@@ -245,7 +250,7 @@ object SearchEngine {
             """
                  WITH search AS (
                     SELECT 
-                      id,
+                      id, word,
                       ts_rank(search_vector, websearch_to_tsquery('simple', f_unaccent(?))) AS fts_rank,
                       similarity(f_unaccent(word), f_unaccent(?)) AS trigram_rank
                       FROM flashcards       
@@ -257,7 +262,7 @@ object SearchEngine {
                       OR f_unaccent(word) ILIKE (f_unaccent(?) || '%')))
 
                   
-                SELECT id, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+                SELECT id, word as title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
                 FROM search
                 ORDER BY final_score DESC
             """.trimIndent()
@@ -277,6 +282,7 @@ object SearchEngine {
                 results.add(
                     SearchResponse(
                         id = resultSet.getLong("id"),
+                        title = resultSet.getString("title"),
                         score = resultSet.getFloat("final_score")
                     )
                 )

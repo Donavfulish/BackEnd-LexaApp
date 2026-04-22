@@ -15,7 +15,7 @@ data class DetailFlashcard(
     val audioUrl: String?,
     val meaning: String,
     val example: String?,
-    val partOfSpeech: String
+    val partOfSpeechId: Int
 )
 
 @Serializable

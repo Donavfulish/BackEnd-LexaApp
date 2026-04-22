@@ -135,7 +135,7 @@ class FlashcardRepository {
                             audioUrl = row[FlashcardsTable.audioUrl],
                             meaning = row[FlashcardsTable.meaningVi] ?: "",
                             example = row[FlashcardsTable.example],
-                            partOfSpeech = row[PartOfSpeechesTable.name] ?: "",
+                            partOfSpeechId = row[PartOfSpeechesTable.id].value ,
                         ),
                         result = finalStatus
                     )
@@ -150,7 +150,7 @@ class FlashcardRepository {
                     audioUrl = row[FlashcardsTable.audioUrl],
                     meaning = row[FlashcardsTable.meaningVi] ?: "",
                     example = row[FlashcardsTable.example],
-                    partOfSpeech = row[PartOfSpeechesTable.name] ?: "")
+                    partOfSpeechId = row[PartOfSpeechesTable.id].value)
             }
         }
         val finalResults = if (isRevelant && queryList != null) {

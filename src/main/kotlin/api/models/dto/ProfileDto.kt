@@ -24,6 +24,9 @@ data class GetProfileResponse  (
     val address: String?,
     val avatarUrl: String?,
     val email: String?,
+    val activeCourses: Int ,
+    val vocabularies: Int ,
+    val vocabSets: Int
 )
 
 @Serializable
@@ -33,4 +36,9 @@ data class GetLanguageResponse (
 @Serializable
 data class UpdateFcmTokenRequest(
     val fcmToken: String
+)
+@Serializable
+data class GetAchievementResponse (
+    val countStudent: Int,
+    val countFavorite: Int
 )

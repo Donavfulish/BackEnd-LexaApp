@@ -1,6 +1,7 @@
 package api.services
 
 import api.models.dto.ChangePasswordRequest
+import api.models.dto.GetAchievementResponse
 import api.models.dto.GetProfileResponse
 import api.models.dto.UpdateFcmTokenRequest
 import api.models.dto.UpdateProfileRequest
@@ -25,5 +26,8 @@ class ProfileService(
 
     suspend fun uploadAvatar(userId: Int, imageUrl: String?): Boolean {
         return profileRepository.updateAvatar(userId, imageUrl)
+    }
+    suspend fun getAchievement(userId: Int): GetAchievementResponse {
+        return profileRepository.getAchievements(userId)
     }
 }

@@ -107,5 +107,10 @@ fun Route.profileRoutes(service: ProfileService) {
                 )
             }
         }
+        get("/achievements") {
+            val userId = call.getUserIdOrRespond() ?: return@get
+            val result = service.getAchievement(userId)
+            call.respond(HttpStatusCode.OK, successResponse(result, "Lấy thành tựu thành công"))
+        }
     }
 }

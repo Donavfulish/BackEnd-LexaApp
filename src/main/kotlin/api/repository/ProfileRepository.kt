@@ -1,13 +1,18 @@
 package api.repository
 
 import api.models.dto.ChangePasswordRequest
+import api.models.dto.GetAchievementResponse
 import com.lexa.api.config.DatabaseFactory.dbQuery
 import org.jetbrains.exposed.sql.*
 import api.models.dto.GetProfileResponse
 import api.models.dto.UpdateFcmTokenRequest
 import api.models.dto.UpdateProfileRequest
 import api.models.dto.UserInfo
+import api.models.tables.FlashcardDecksTable
+import api.models.tables.FlashcardResultsTable
 import api.models.tables.SpeakingDaysTable
+import api.models.tables.SpeakingParagraphResultsTable
+import api.models.tables.SpeakingParagraphsTable
 import api.models.tables.UserFavoriteCoursesTable
 import api.models.tables.UsersTable
 import api.services.CloudinaryService
@@ -20,31 +25,45 @@ import java.time.LocalDateTime
 class ProfileRepository {
 
     suspend fun getProfile(userId: Int): GetProfileResponse= dbQuery {
-        UsersTable
-            .slice(
-                UsersTable.id,
-                UsersTable.name,
-                UsersTable.dateOfBirth,
-                UsersTable.address,
-                UsersTable.avatarUrl,
-                UsersTable.email,
-            )
+        val userRow = UsersTable
             .select { UsersTable.id eq userId }
-            .map {row ->
+            .singleOrNull() ?: throw Exception("User not found")
 
-                val exposedLocalDate = row[UsersTable.dateOfBirth]
-                val utilDate = exposedLocalDate?.let { java.sql.Date.valueOf(it) }
+        // 2. activeCourses: Đếm số khóa học user đã tham gia (có kết quả trong SpeakingParagraphResults)
+        // Cần join: SpeakingParagraphResults -> SpeakingParagraphs -> SpeakingDays -> Courses
+        val activeCoursesCount = SpeakingParagraphResultsTable
+            .innerJoin(SpeakingParagraphsTable)
+            .innerJoin(SpeakingDaysTable)
+            .slice(SpeakingDaysTable.courseId)
+            .select { SpeakingParagraphResultsTable.userId eq userId }
+            .withDistinct() // Đảm bảo một khóa học không bị đếm nhiều lần
+            .count()
 
-                GetProfileResponse(
-                    id = row[UsersTable.id].value,
-                    fullName = row[UsersTable.name],
-                    DoB = utilDate ?: java.sql.Date.valueOf(row[UsersTable.dateOfBirth]),
-                    address = row[UsersTable.address],
-                    avatarUrl = row[UsersTable.avatarUrl],
-                    email = row[UsersTable.email],
-                )
-            }
-            .single()
+        // 3. vocabularies: Đếm số từ vựng trong FlashcardResultsTable
+        val vocabCount = FlashcardResultsTable
+            .select { FlashcardResultsTable.userId eq userId }
+            .count()
+
+        // 4. vocabSets: Đếm số lượng bộ thẻ do user sở hữu (creatorId)
+        val vocabSetsCount = FlashcardDecksTable
+            .select { FlashcardDecksTable.creatorId eq userId }
+            .count()
+
+
+        val exposedLocalDate = userRow[UsersTable.dateOfBirth]
+        val utilDate = exposedLocalDate?.let { java.sql.Date.valueOf(it) }
+
+        GetProfileResponse(
+            id = userRow[UsersTable.id].value,
+            fullName = userRow[UsersTable.name],
+            DoB = utilDate ?: java.sql.Date.valueOf(userRow[UsersTable.dateOfBirth]),
+            address = userRow[UsersTable.address],
+            avatarUrl = userRow[UsersTable.avatarUrl],
+            email = userRow[UsersTable.email],
+            activeCourses = activeCoursesCount.toInt(),
+            vocabularies = vocabCount.toInt(),
+            vocabSets = vocabSetsCount.toInt()
+        )
     }
 
     suspend fun updateProfile(userId: Int, data: UpdateProfileRequest): Boolean = dbQuery {
@@ -121,5 +140,27 @@ class ProfileRepository {
         }
 
         updatedRows > 0
+    }
+    suspend fun getAchievements(teacherId: Int): GetAchievementResponse = dbQuery {
+
+        val studentCount = api.models.tables.CoursesTable
+            .innerJoin(SpeakingDaysTable, onColumn = { api.models.tables.CoursesTable.id }, otherColumn = { SpeakingDaysTable.courseId })
+            .innerJoin(SpeakingParagraphsTable, onColumn = { SpeakingDaysTable.id }, otherColumn = { SpeakingParagraphsTable.speakingDayId })
+            .innerJoin(SpeakingParagraphResultsTable, onColumn = { SpeakingParagraphsTable.id }, otherColumn = { SpeakingParagraphResultsTable.paragraphId })
+            .slice(SpeakingParagraphResultsTable.userId)
+            .select { api.models.tables.CoursesTable.creatorId eq teacherId }
+            .withDistinct()
+            .count()
+
+
+        val favoriteCount = api.models.tables.CoursesTable
+            .innerJoin(UserFavoriteCoursesTable, onColumn = { api.models.tables.CoursesTable.id }, otherColumn = { UserFavoriteCoursesTable.courseId })
+            .select { api.models.tables.CoursesTable.creatorId eq teacherId }
+            .count()
+
+        GetAchievementResponse(
+            countStudent = studentCount.toInt(),
+            countFavorite = favoriteCount.toInt()
+        )
     }
 }

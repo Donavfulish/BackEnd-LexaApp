@@ -206,6 +206,13 @@ class DeckRepository {
                 .slice(FlashcardsTable.id.count())
                 .select { FlashcardsTable.deckId eq FlashcardDecksTable.id }
         )
+
+        val courseLinkCountExpr = wrapAsExpression<Long>(
+            CoursesTable
+                .slice(CoursesTable.id.count())
+                .select { CoursesTable.deckId eq FlashcardDecksTable.id }
+        )
+
         val baseQuery = (FlashcardDecksTable leftJoin TopicsTable)
             .slice(
                 FlashcardDecksTable.id,
@@ -214,7 +221,8 @@ class DeckRepository {
                 TopicsTable.id,
                 TopicsTable.name,
                 TopicsTable.color,
-                vocabCountExpr
+                vocabCountExpr,
+                courseLinkCountExpr
             )
             .select { FlashcardDecksTable.creatorId eq userId }
 
@@ -263,7 +271,8 @@ class DeckRepository {
                     )
                 },
                 vocabNumber = row[vocabCountExpr]?.toInt() ?: 0,
-                createdAt = convertTime(row[FlashcardDecksTable.createdAt])
+                createdAt = convertTime(row[FlashcardDecksTable.createdAt]) ,
+                canDelete = (row[courseLinkCountExpr]?.toInt() ?: 0) == 0
             )
         }
 

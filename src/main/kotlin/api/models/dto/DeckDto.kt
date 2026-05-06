@@ -13,7 +13,8 @@ data class DeckDto(
     val title: String,
     val topic: TopicDto? = null,
     val vocabNumber: Int,
-    val createdAt: String
+    val createdAt: String,
+    val canDelete: Boolean
 )
 
 @Serializable

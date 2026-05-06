@@ -152,8 +152,46 @@ class CoursesRepository {
             .groupBy(FlashcardsTable.deckId)
             .associate { it[FlashcardsTable.deckId] to it[FlashcardsTable.id.count()] }
 
+
         val results = baseQuery.limit(limit).map { row ->
             val courseId = row[CoursesTable.id]
+            val totalDayExpr = SpeakingDaysTable.id.count()
+            val totalDays: Long = SpeakingDaysTable
+                .slice(totalDayExpr)
+                .select { SpeakingDaysTable.courseId eq courseId }
+                .firstOrNull()
+                ?.get(totalDayExpr) ?: 0L
+
+            val completedDays = SpeakingDaysTable
+                .select { SpeakingDaysTable.courseId eq courseId }
+                .count { dayRow ->
+                    val dayId = dayRow[SpeakingDaysTable.id]
+
+                    val totalParaExpr = SpeakingParagraphsTable.id.count()
+                    val doneParaExpr = SpeakingParagraphResultsTable.paragraphId.count()
+
+                    val totalParas: Long = SpeakingParagraphsTable
+                        .slice(totalParaExpr)
+                        .select { SpeakingParagraphsTable.speakingDayId eq dayId }
+                        .first()[totalParaExpr]
+
+                    val doneParas: Long =
+                        (SpeakingParagraphResultsTable
+                            .innerJoin(SpeakingParagraphsTable)
+                            .slice(doneParaExpr)
+                            .select {
+                                (SpeakingParagraphsTable.speakingDayId eq dayId) and
+                                        (SpeakingParagraphResultsTable.userId eq userId)
+                            }
+                            .firstOrNull()
+                            ?.get(doneParaExpr) ?: 0L)
+
+                    doneParas == totalParas && totalParas > 0
+                }
+
+            val completed =
+                if (totalDays == 0L) 0
+                else ((completedDays * 100) / totalDays).toInt()
             ShortCourseDto(
                 id = courseId.value,
                 thumbnail_url = row[CoursesTable.thumbnailUrl],
@@ -170,7 +208,8 @@ class CoursesRepository {
                 vocabNumber = (vocabCountsMap[row[CoursesTable.deckId]] ?: 0L).toInt(),
                 studying_user_count = getStudyingUserCount(courseId),
                 favorite_user_count = getFavoriteUserCount(courseId),
-                created_at = row[CoursesTable.createdAt].toString()
+                created_at = row[CoursesTable.createdAt].toString(),
+                completed = completed
             )
         }
 

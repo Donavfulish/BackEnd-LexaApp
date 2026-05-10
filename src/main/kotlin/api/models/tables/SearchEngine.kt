@@ -355,9 +355,10 @@ object SearchEngine {
                       OR f_unaccent(flashcards.word) ILIKE (f_unaccent(?) || '%')))
 
                   
-                SELECT id, word as title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
+                SELECT DISTINCT ON (word) 
+                 id, word as title, (fts_rank * 0.7 + trigram_rank * 0.3) AS final_score
                 FROM search
-                ORDER BY final_score DESC
+                ORDER BY word, final_score DESC
             """.trimIndent()
         TransactionManager.current().exec(
             sql,

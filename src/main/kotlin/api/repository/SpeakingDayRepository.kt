@@ -7,11 +7,14 @@ import api.models.dto.ShortParagraphDto
 import api.models.dto.ShortParagraphSpeakingDayDto
 import api.models.dto.ShortSpeakingDayDto
 import api.models.dto.SpeakingDayPagination
+import api.models.dto.WordEvaluationItem
 import api.models.tables.CoursesTable
 import api.models.tables.SpeakingDaysTable
 import api.models.tables.SpeakingParagraphResultsTable
 import api.models.tables.SpeakingParagraphsTable
 import com.lexa.api.config.DatabaseFactory.dbQuery
+import kotlinx.serialization.json.Json
+import org.cloudinary.json.JSONException
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -29,14 +32,22 @@ class SpeakingDayRepository {
         SpeakingDaysTable
         .select { SpeakingDaysTable.id eq speakingDayId }
         .map { row ->
-            val paragraphs = SpeakingParagraphsTable
+            val paragraphs = (SpeakingParagraphsTable leftJoin SpeakingParagraphResultsTable)
                 .select { SpeakingParagraphsTable.speakingDayId eq speakingDayId }
                 .orderBy(SpeakingParagraphsTable.paragraphOrder to SortOrder.ASC)
                 .map { pRow ->
                     ShortParagraphDto(
                         id = pRow[SpeakingParagraphsTable.id].value,
                         paragraph = pRow[SpeakingParagraphsTable.paragraph],
-                        paragraph_order = pRow[SpeakingParagraphsTable.paragraphOrder]
+                        paragraph_order = pRow[SpeakingParagraphsTable.paragraphOrder],
+                        audioUrl = null,
+                        wordEvaluation = pRow[SpeakingParagraphResultsTable.wordEvaluation]?.let {
+                            Json.decodeFromString<List<WordEvaluationItem>>(it)
+                        },
+                        goodCount = pRow[SpeakingParagraphResultsTable.goodCount],
+                        mediumCount = pRow[SpeakingParagraphResultsTable.mediumCount],
+                        badCount = pRow[SpeakingParagraphResultsTable.badCount],
+                        userAudioUrl = pRow[SpeakingParagraphResultsTable.userAudioUrl]
                     )
                 }
 

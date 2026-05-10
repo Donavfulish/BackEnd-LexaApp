@@ -1,4 +1,5 @@
 package api.models.dto
+import com.google.gson.annotations.SerializedName
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -6,6 +7,13 @@ data class ShortParagraphDto(
     val id: Long,
     val paragraph: String?,
     val paragraph_order: Long?,
+
+    val audioUrl: String? = null,
+    val wordEvaluation: List<WordEvaluationItem>? = null,
+    val goodCount: Int? = null,
+    val mediumCount: Int? = null,
+    val badCount: Int? = null,
+    val userAudioUrl: String? = null
 ){
 
 }

@@ -257,10 +257,16 @@ class FlashcardRepository {
             val deletedRows = FlashcardsTable.deleteWhere { FlashcardsTable.id eq flashcardId }
             val isSuccess = deletedRows > 0
 
-            if (isSuccess && !urlToDelete.isNullOrBlank()) {
-                CloudinaryService.deleteImage(urlToDelete)
-            }
 
+            if (isSuccess && !urlToDelete.isNullOrBlank()) {
+                val usageCount = FlashcardsTable
+                    .select { FlashcardsTable.imageUrl eq urlToDelete }
+                    .count()
+
+                if (usageCount == 0L) {
+                    CloudinaryService.deleteImage(urlToDelete)
+                }
+            }
             isSuccess
         } else {
             false

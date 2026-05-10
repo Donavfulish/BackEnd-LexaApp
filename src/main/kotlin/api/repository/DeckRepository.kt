@@ -2,6 +2,7 @@ package api.repository
 
 import api.models.dto.AllCoursePaginationResponse
 import api.models.dto.AllDeckPaginationResponse
+import api.models.dto.CopyDeckRequest
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.inSubQuery
 import api.models.dto.CreateDeckRequest
 import api.models.dto.CreateDeckResultRequest
@@ -323,6 +324,43 @@ class DeckRepository {
         val deletedRows = UserFavoriteDecksTable.deleteWhere {
             (UserFavoriteDecksTable.userId eq userId) and
                     (UserFavoriteDecksTable.deckId eq deckId)
+        }
+        true
+    }
+
+
+    suspend fun copyDeck(userId: Int, request: CopyDeckRequest): Boolean = dbQuery {
+        val originalDeckId: Long = request.deckId;
+        val originalDeck = FlashcardDecksTable
+            .select { FlashcardDecksTable.id eq originalDeckId }
+            .singleOrNull() ?: return@dbQuery false
+
+
+        val newDeckId = FlashcardDecksTable.insertAndGetId {
+            it[creatorId] = userId
+            it[title] = originalDeck[title]
+            it[description] = originalDeck[description]
+            it[topicId] = originalDeck[topicId]
+            it[privacy] = api.models.enum.PrivacyType.PUBLIC
+        }.value
+
+        val originalFlashcards = FlashcardsTable
+            .select { FlashcardsTable.deckId eq originalDeckId }
+            .toList()
+
+        if (originalFlashcards.isNotEmpty()) {
+            FlashcardsTable.batchInsert(originalFlashcards) { originalCard ->
+                this[FlashcardsTable.deckId] = newDeckId
+                this[FlashcardsTable.imageUrl] = originalCard[FlashcardsTable.imageUrl]
+                this[FlashcardsTable.audioUrl] = originalCard[FlashcardsTable.audioUrl]
+                this[FlashcardsTable.transcription] = originalCard[FlashcardsTable.transcription]
+                this[FlashcardsTable.word] = originalCard[FlashcardsTable.word]
+                this[FlashcardsTable.meaningVi] = originalCard[FlashcardsTable.meaningVi]
+                this[FlashcardsTable.type] = originalCard[FlashcardsTable.type]
+                this[FlashcardsTable.partOfSpeechId] = originalCard[FlashcardsTable.partOfSpeechId]
+                this[FlashcardsTable.example] = originalCard[FlashcardsTable.example]
+
+            }
         }
         true
     }

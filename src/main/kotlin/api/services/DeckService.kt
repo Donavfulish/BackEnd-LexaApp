@@ -2,6 +2,7 @@ package api.services
 
 import api.models.dto.AllCoursePaginationResponse
 import api.models.dto.AllDeckPaginationResponse
+import api.models.dto.CopyDeckRequest
 import api.models.dto.CreateDeckRequest
 import api.models.dto.CreateDeckResultRequest
 import api.models.dto.DeckDto
@@ -107,6 +108,15 @@ class DeckService(
     suspend fun disFavoriteDeck(userId: Int, deckId: Long): Result<Boolean> {
         return try {
             val result = deckRepository.removeFavoriteDeck(userId, deckId)
+            Result.success(result)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+    suspend fun copyDeck(userId: Int, request: CopyDeckRequest) : Result<Boolean>{
+
+        return try {
+            val result = deckRepository.copyDeck(userId, request);
             Result.success(result)
         } catch (e: Exception) {
             Result.failure(e)

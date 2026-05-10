@@ -95,7 +95,22 @@ fun Route.deckRoutes(service: DeckService) {
                 }
             )
         }
+        post("/copy") {
+            val userId = call.getUserIdOrRespond() ?: return@post
+            val request = call.receive<CopyDeckRequest>()
 
+            service.copyDeck(userId,request).handleResult(
+                onSuccess = {
+                    call.respond(
+                        HttpStatusCode.Created,
+                        successResponse(it, "Sao chép từ vựng thành công")
+                    )
+                },
+                onError = {
+                    call.respond(HttpStatusCode.BadRequest, errorResponse(it))
+                }
+            )
+        }
         // ===== RESULT =====
 
         get("/result/{deckId}") {

@@ -59,3 +59,7 @@ data class AllDeckPaginationResponse(
     val searchInfo: SearchInfo,
     val nextCursor: Long?= null,
     val totalItem: Long)
+@Serializable
+data class CopyDeckRequest(
+    val deckId: Long,
+)

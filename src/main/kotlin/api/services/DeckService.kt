@@ -119,6 +119,7 @@ class DeckService(
             val result = deckRepository.copyDeck(userId, request);
             Result.success(result)
         } catch (e: Exception) {
+            println(e)
             Result.failure(e)
         }
     }

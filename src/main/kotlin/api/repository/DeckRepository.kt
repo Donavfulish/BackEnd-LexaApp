@@ -336,11 +336,18 @@ class DeckRepository {
             .singleOrNull() ?: return@dbQuery false
 
 
+        val courseTopicId = (CoursesTable leftJoin FlashcardDecksTable)
+            .slice(CoursesTable.topicId)
+            .select { FlashcardDecksTable.id eq request.deckId }
+            .singleOrNull()
+            ?.get(CoursesTable.topicId)
+
+
         val newDeckId = FlashcardDecksTable.insertAndGetId {
             it[creatorId] = userId
             it[title] = originalDeck[title]
             it[description] = originalDeck[description]
-            it[topicId] = originalDeck[topicId]
+            it[topicId] = courseTopicId ?: throw IllegalArgumentException("Topic ID cannot be null")
             it[privacy] = api.models.enum.PrivacyType.PUBLIC
         }.value
 

@@ -45,6 +45,10 @@ class SpeakingDayService (
                 val learnersDeferred = async {
                     CoursesRepository().getLearnersInCourse(speakingDay.courseId)
                 }
+                val nameCourseDeferred = async {
+                    CoursesRepository().getCourseDetail(userId,speakingDay.courseId);
+                }
+                val nameCourse =  nameCourseDeferred.await()?.title;
 
                 val listUsersFavorited = favoritesDeferred.await()
                 val listLearners = learnersDeferred.await()
@@ -54,7 +58,7 @@ class SpeakingDayService (
                 EventBus.publish(AppEvent.SpeakingDayChanged(
                     combinedUserIds,
                     "Cập nhật khóa học",
-                    "Khóa học bạn quan tâm vừa thêm ngày học"
+                    "Khóa học $nameCourse vừa thêm ngày học"
                 ))
             }
 
